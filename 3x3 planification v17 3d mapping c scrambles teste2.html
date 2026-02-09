@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Create 3x3 Grids of Smaller Squares</title>
+<style>
+    .grid-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 600px;
+      transform: scale(0.5); /* Adjust scale factor as needed */
+      transform-origin: center; /* Ensure scaling happens from center */
+    }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 60px); /* 3 columns of 60px each */
+    gap: 5px; /* gap between the squares */
+    border: 2px solid black; /* Add a black border */
+    padding: 5px; /* Optional padding inside the border */
+  }
+
+  .square {
+    width: 60px; /* width of each square */
+    height: 60px; /* height of each square */
+  }
+
+  .white-square {
+    background-color: white;
+  }
+
+  .orange-square {
+    background-color: orange;
+  }
+
+  .green-square {
+    background-color: green;
+  }
+
+  .red-square {
+    background-color: red;
+  }
+
+  .blue-square {
+    background-color: blue;
+  }
+
+  .yellow-square {
+    background-color: yellow;
+  }
+ 
+</style>
+</head>
+<body>
+  
+<div id="scramble"></div>    
+
+<div class="grid-container">
+  <!-- White 3x3 grid -->
+  <div id="whiteSquareGrid" class="grid"style="position: relative; bottom: 200px; left: 408px;">
+  </div>
+
+  <!-- Orange 3x3 grid -->
+  <div id="orangeSquareGrid" class="grid">
+  </div>
+
+  <!-- Green 3x3 grid -->
+  <div id="greenSquareGrid" class="grid">
+  </div>
+
+  <!-- Red 3x3 grid -->
+  <div id="redSquareGrid" class="grid">
+  </div>
+
+  <!-- Blue 3x3 grid -->
+  <div id="blueSquareGrid" class="grid">
+  </div>
+
+  <!-- Yellow 3x3 grid -->
+  <div id="yellowSquareGrid" class="grid"style="position: relative; top: 200px; right: 612px;">
+  </div>
+</div>
+
+
+  
+<script src="3d mapping scramble theory v6.js"></script>
+
+<script>
+  
+  // Function to create grid squares
+  function createGrid(containerId, squareClass) {
+    let squaregrid = document.getElementById(containerId);
+    for (let i = 0; i < 9; i++) {
+      let square = document.createElement('div');
+      square.className = 'square ' + squareClass;
+      squaregrid.appendChild(square);
+    }
+  }
+
+// Create 3x3 grids for different colors
+createGrid('whiteSquareGrid', 'white-square');
+createGrid('orangeSquareGrid', 'orange-square');
+createGrid('greenSquareGrid', 'green-square');
+createGrid('redSquareGrid', 'red-square');
+createGrid('blueSquareGrid', 'blue-square');
+createGrid('yellowSquareGrid', 'yellow-square');
+  
+// Original Rubik's Cube edges with identifiers
+let pieceColors = {
+  'E1': 'WB',
+  'E2': 'WR',
+  'E3': 'WG',
+  'E4': 'WO',
+  'E5': 'OB',
+  'E6': 'OG',
+  'E7': 'RB',
+  'E8': 'RG',
+  'E9': 'YG',
+  'E10': 'YR',
+  'E11': 'YB',
+  'E12': 'YO',
+  'C1': 'WOB',
+  'C2': 'WBR',
+  'C3': 'WRG',
+  'C4': 'WGO',
+  'C5': 'YOG',
+  'C6': 'YGR',
+  'C7': 'YRB',
+  'C8': 'YBO'
+};
+
+// Mapping object to specify number-letter pairs for specific edges
+const pieceCoordinates = {
+  'E1': ['2A', '2E'],
+  'E2': ['6A', '2D'],
+  'E3': ['8A', '2C'],
+  'E4': ['4A', '2B'],
+  'E5': ['4B', '6E'],
+  'E6': ['6B', '4C'],
+  'E7': ['6D', '4E'],
+  'E8': ['4D', '6C'],
+  'E9': ['2F', '8C'],
+  'E10': ['6F', '8D'],
+  'E11': ['8F', '8E'],
+  'E12': ['4F', '8B'],
+  'C1': ['1A', '1B', '3E'],
+  'C2': ['3A', '1E', '3D'],
+  'C3': ['9A', '1D', '3C'],
+  'C4': ['7A', '1C', '3B'],
+  'C5': ['1F', '9B', '7C'],
+  'C6': ['3F', '9C', '7D'],
+  'C7': ['9F', '9D', '7E'],
+  'C8': ['7F', '9E', '7B'],
+};
+
+// Create a new object for updated Rubik's Cube edges
+let updatedPieceColors = { ...pieceColors };
+
+// Create a new object for the first values of piece Coordinates
+const firstValuesObject = {};
+
+// Create a new object for the second values of piece Coordinates
+const secondValuesObject = {};
+  
+// Create a new object for the second values of piece Coordinates
+const thirdValuesObject = {};  
+
+for (const [piece, coordinates] of Object.entries(pieceCoordinates)) {
+  if (updatedPieceColors[piece]) {
+    firstValuesObject[piece] = coordinates[0];  // Add the first value to edgeAssignmentsObject
+    secondValuesObject[piece] = coordinates[1];     // Add the second value to secondValuesObject
+    thirdValuesObject[piece] = coordinates[2];     // Add the second value to secondValuesObject
+  }
+}
+  
+
+  let blueSquares = document.querySelectorAll('#blueSquareGrid .blue-square');
+  let redSquares = document.querySelectorAll('#redSquareGrid .red-square');
+  let yellowSquares = document.querySelectorAll('#yellowSquareGrid .yellow-square');
+  let greenSquares = document.querySelectorAll('#greenSquareGrid .green-square');
+  let whiteSquares = document.querySelectorAll('#whiteSquareGrid .white-square');  
+  let orangeSquares = document.querySelectorAll('#orangeSquareGrid .orange-square'); 
+
+  const colorMap = {
+    'W': 'white',
+    'O': 'orange',
+    'G': 'green',
+    'R': 'red',
+    'B': 'blue',
+    'Y': 'yellow'
+  };
+  
+// Define a constant mapping of letters to their corresponding square variable names
+const lettertToColorMapping = {
+  'A': whiteSquares,
+  'B': orangeSquares,
+  'C': greenSquares,
+  'D': redSquares,
+  'E': blueSquares,
+  'F': yellowSquares
+};
+ 
+// Define a constant mapping of letters to their corresponding square variable names
+const lettertToColorMapping2 = {
+  'A': 'white',
+  'B': 'orange',
+  'C': 'green',
+  'D': 'red',
+  'E': 'blue',
+  'F': 'yellow'
+};
+  
+  
+function updateMoves() {
+  const allKeys = Object.keys(updatedPieceColors);
+  const keysLength = allKeys.length;
+
+  for (let i = 0; i < keysLength; i++) {
+    const key = allKeys[i];
+
+    //Const colors to change    
+    const pieceColor1 = firstValuesObject[key];
+    const pieceColor2 = secondValuesObject[key];
+    const pieceColor3 = thirdValuesObject[key];    
+    const pieceColors = updatedPieceColors[key];
+    
+    //Orientation 1       
+    const newColor1 = colorMap[pieceColors[0]];
+    const colorgrid1 = lettertToColorMapping[pieceColor1[1]];
+    const newnumber1 = pieceColor1[0] - 1;   
+    
+    colorgrid1[newnumber1].classList.remove('orange-square', 'green-square', 'red-square', 'blue-square', 'yellow-square', 'white-square');
+    colorgrid1[newnumber1].classList.add(`${newColor1}-square`);    
+    
+    //Orientation 2        
+    const newColor2 = colorMap[pieceColors[1]];
+    const colorgrid2 = lettertToColorMapping[pieceColor2[1]];
+    const newnumber2 = pieceColor2[0] - 1;        
+    
+    colorgrid2[newnumber2].classList.remove('orange-square', 'green-square', 'red-square', 'blue-square', 'yellow-square', 'white-square');
+    colorgrid2[newnumber2].classList.add(`${newColor2}-square`);
+        
+     // Skip the rest of the loop for keys after the 12th key
+  if (i > 11) {    
+    
+    //Orientation 3  
+    const newColor3 = colorMap[pieceColors[2]];        
+    const colorgrid3 = lettertToColorMapping[pieceColor3[1]];        
+    const newnumber3 = pieceColor3[0] - 1;        
+      
+    // Remove and add classes for the first piece
+    colorgrid3[newnumber3].classList.remove('orange-square', 'green-square', 'red-square', 'blue-square', 'yellow-square', 'white-square');
+    colorgrid3[newnumber3].classList.add(`${newColor3}-square`);
+      
+    }
+  }   
+}
+
+  
+function printScrambleMoves() {
+
+    // Get the current content of the div with ID 'myDivId'
+    const displayedScramble = document.getElementById('scramble').textContent;
+
+    // Split the scramble string by spaces to get individual moves
+    const moves = displayedScramble.split(' ');
+
+    // Map move notations to their respective functions
+    const moveFunctions = {
+        "U": Umove,
+        "U'": () => { Umove(); Umove(); Umove(); },
+        "U2": () => { Umove(); Umove(); },
+        "D": Dmove,
+        "D'": () => { Dmove(); Dmove(); Dmove(); },
+        "D2": () => { Dmove(); Dmove(); },
+        "R": Rmove,
+        "R'": () => { Rmove(); Rmove(); Rmove(); },
+        "R2": () => { Rmove(); Rmove(); },
+        "L": Lmove,
+        "L'": () => { Lmove(); Lmove(); Lmove(); },
+        "L2": () => { Lmove(); Lmove(); },
+        "F": Fmove,
+        "F'": () => { Fmove(); Fmove(); Fmove(); },
+        "F2": () => { Fmove(); Fmove(); },
+        "B": Bmove,
+        "B'": () => { Bmove(); Bmove(); Bmove(); },
+        "B2": () => { Bmove(); Bmove(); }
+    };
+  
+    //Reset updatedRubiksCubeEdges to original values
+    Object.assign(updatedPieceColors, pieceColors);
+
+    // Loop through each move and execute the corresponding function
+    moves.forEach(move => {
+        // Get the function corresponding to the move notation
+        const func = moveFunctions[move];
+        
+        // Call the function if it exists
+        if (func) {
+            func();
+        } 
+      
+        //Update the colors display     
+        updateMoves()
+        
+    });
+}
+
+  
+function Umove() { 
+    let edges1 = updatedPieceColors['E1'];
+    let edges2 = updatedPieceColors['E2'];
+    let edges3 = updatedPieceColors['E3'];
+    let edges4 = updatedPieceColors['E4'];
+    updatedPieceColors['E1'] = edges4
+    updatedPieceColors['E2'] = edges1
+    updatedPieceColors['E3'] = edges2
+    updatedPieceColors['E4'] = edges3
+    
+    let corners1 = updatedPieceColors['C1']
+    let corners2 = updatedPieceColors['C2']
+    let corners3 = updatedPieceColors['C3']
+    let corners4 = updatedPieceColors['C4']
+    updatedPieceColors['C1'] = corners4
+    updatedPieceColors['C2'] = corners1
+    updatedPieceColors['C3'] = corners2
+    updatedPieceColors['C4'] = corners3  
+}
+  
+function Dmove() {  
+    let edges1 = updatedPieceColors['E9'];
+    let edges2 = updatedPieceColors['E10'];
+    let edges3 = updatedPieceColors['E11'];
+    let edges4 = updatedPieceColors['E12'];
+    updatedPieceColors['E9'] = edges4
+    updatedPieceColors['E10'] = edges1
+    updatedPieceColors['E11'] = edges2
+    updatedPieceColors['E12'] = edges3
+    
+    let corners1 = updatedPieceColors['C5']
+    let corners2 = updatedPieceColors['C6']
+    let corners3 = updatedPieceColors['C7']
+    let corners4 = updatedPieceColors['C8']
+    updatedPieceColors['C5'] = corners4
+    updatedPieceColors['C6'] = corners1
+    updatedPieceColors['C7'] = corners2
+    updatedPieceColors['C8'] = corners3  
+} 
+  
+function Rmove() {  
+    let edges1 = updatedPieceColors['E2'];
+    let edges2 = updatedPieceColors['E7'];
+    let edges3 = updatedPieceColors['E10'];
+    let edges4 = updatedPieceColors['E8'];
+    updatedPieceColors['E2'] = edges4[1] + edges4[0];
+    updatedPieceColors['E7'] = edges1[1] + edges1[0];
+    updatedPieceColors['E10'] = edges2[1] + edges2[0];
+    updatedPieceColors['E8'] = edges3[1] + edges3[0];
+  
+    let corners1 = updatedPieceColors['C2']
+    let corners2 = updatedPieceColors['C3']
+    let corners3 = updatedPieceColors['C6']
+    let corners4 = updatedPieceColors['C7']
+    updatedPieceColors['C2'] = corners2[2] + corners2[0] + corners2[1]
+    updatedPieceColors['C3'] = corners3[1] + corners3[2] + corners3[0]
+    updatedPieceColors['C6'] = corners4[2] + corners4[0] + corners4[1]
+    updatedPieceColors['C7'] = corners1[1] + corners1[2] + corners1[0]     
+}  
+  
+function Lmove() {
+  
+    let edges1 = updatedPieceColors['E4'];
+    let edges2 = updatedPieceColors['E6'];
+    let edges3 = updatedPieceColors['E12'];
+    let edges4 = updatedPieceColors['E5'];
+    updatedPieceColors['E4'] = edges4[1] + edges4[0];
+    updatedPieceColors['E6'] = edges1[1] + edges1[0];
+    updatedPieceColors['E12'] = edges2[1] + edges2[0];
+    updatedPieceColors['E5'] = edges3[1] + edges3[0];
+    
+    let corners1 = updatedPieceColors['C1']
+    let corners2 = updatedPieceColors['C4']
+    let corners3 = updatedPieceColors['C5']
+    let corners4 = updatedPieceColors['C8']
+    updatedPieceColors['C1'] = corners4[1] + corners4[2] + corners4[0]
+    updatedPieceColors['C4'] = corners1[2] + corners1[0] + corners1[1]
+    updatedPieceColors['C5'] = corners2[1] + corners2[2] + corners2[0]
+    updatedPieceColors['C8'] = corners3[2] + corners3[0] + corners3[1]     
+} 
+  
+function Fmove(){  
+    let edges1 = updatedPieceColors['E3']
+    let edges2 = updatedPieceColors['E8']
+    let edges3 = updatedPieceColors['E9']
+    let edges4 = updatedPieceColors['E6']
+    updatedPieceColors['E3'] = edges4
+    updatedPieceColors['E8'] = edges1 
+    updatedPieceColors['E9'] = edges2
+    updatedPieceColors['E6'] = edges3
+ 
+    let corners1 = updatedPieceColors['C3']
+    let corners2 = updatedPieceColors['C4']
+    let corners3 = updatedPieceColors['C5']
+    let corners4 = updatedPieceColors['C6']
+    updatedPieceColors['C3'] = corners2[2] + corners2[0] + corners2[1]
+    updatedPieceColors['C4'] = corners3[1] + corners3[2] + corners3[0]
+    updatedPieceColors['C5'] = corners4[2] + corners4[0] + corners4[1]
+    updatedPieceColors['C6'] = corners1[1] + corners1[2] + corners1[0]     
+} 
+  
+function Bmove(){  
+    let edges1 = updatedPieceColors['E1']
+    let edges2 = updatedPieceColors['E7']
+    let edges3 = updatedPieceColors['E11']
+    let edges4 = updatedPieceColors['E5']
+    updatedPieceColors['E1'] = edges2
+    updatedPieceColors['E7'] = edges3 
+    updatedPieceColors['E11'] = edges4
+    updatedPieceColors['E5'] = edges1
+ 
+    let corners1 = updatedPieceColors['C1']
+    let corners2 = updatedPieceColors['C2']
+    let corners3 = updatedPieceColors['C7']
+    let corners4 = updatedPieceColors['C8']
+    updatedPieceColors['C1'] = corners2[2] + corners2[0] + corners2[1]
+    updatedPieceColors['C2'] = corners3[1] + corners3[2] + corners3[0]
+    updatedPieceColors['C7'] = corners4[2] + corners4[0] + corners4[1]
+    updatedPieceColors['C8'] = corners1[1] + corners1[2] + corners1[0]     
+}  
+
+ 
+  
+
+
+
+let scramble = '';
+
+function generateWcaScramble() {
+  // list of possible moves
+  const moves1 = ['U', 'D'];
+  const moves2 = ['L', 'R'];
+  const moves3 = ['F', 'B'];
+
+  // create a new array that combines the values from all three constants
+  const moves = moves1.concat(moves2, moves3);
+
+  // list of possible move modifiers
+  const modifiers = ['', "'", '2'];
+
+  // Reset the global scramble variable
+  scramble = '';
+
+  let lastMove = null;
+  let lastMoveGroup = null;
+  let secondLastMoveGroup = null;
+
+  // Declare secondLastMove before using it
+  let secondLastMove = null;
+
+  for (let i = 0; i < 20 + Math.floor(Math.random() * 3); i++) {
+    let move;
+    let moveGroup;
+    do {
+      move = moves[Math.floor(Math.random() * moves.length)];
+      if (moves1.includes(move)) {
+        moveGroup = 1;
+      } else if (moves2.includes(move)) {
+        moveGroup = 2;
+      } else if (moves3.includes(move)) {
+        moveGroup = 3;
+      }
+    } while (move === lastMove || (moveGroup === lastMoveGroup && moveGroup === secondLastMoveGroup));
+    
+    const modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+    scramble += `${move}${modifier} `;
+    
+    secondLastMove = lastMove;
+    lastMove = move;
+    secondLastMoveGroup = lastMoveGroup;
+    lastMoveGroup = moveGroup;
+  }
+
+ 
+
+// Update the content of the div with id "scramble" with the generated scramble
+document.getElementById('scramble').textContent = scramble;
+  
+
+}
+
+generateWcaScramble();  
+printScrambleMoves();
+
+
+
+
+
+
+  
+  
+</script>
+
+</body>
+</html>
