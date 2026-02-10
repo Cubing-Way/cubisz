@@ -1,0 +1,49 @@
+    .grid-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 600px;
+      transform: scale(0.5); /* Adjust scale factor as needed */
+      transform-origin: center; /* Ensure scaling happens from center */
+    }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 60px); /* 3 columns of 60px each */
+    gap: 5px; /* gap between the squares */
+    border: 2px solid black; /* Add a black border */
+    padding: 5px; /* Optional padding inside the border */
+  }
+
+  .square {
+    width: 60px; /* width of each square */
+    height: 60px; /* height of each square */
+  }
+
+  .white-square {
+    background-color: white;
+  }
+
+  .orange-square {
+    background-color: orange;
+  }
+
+  .green-square {
+    background-color: green;
+  }
+
+  .red-square {
+    background-color: red;
+  }
+
+  .blue-square {
+    background-color: blue;
+  }
+
+  .yellow-square {
+    background-color: yellow;
+  }
+ 
+ #scramble {
+  font-size: 24px;
+ }
