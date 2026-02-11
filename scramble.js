@@ -1,12 +1,12 @@
-import { resetCube, U, D, R, L, F, B } from "./cube.js";
+import { resetCube, U, D, R, L, F, B, y, x, z } from "./cube.js";
 import { paintCubeFromStickers } from "./main.js";
 
 let scramble = '';
 
-function generateWcaScramble() {
+function genRanState() {
   const moves1 = ['U', 'D'];
   const moves2 = ['L', 'R'];
-  const moves3 = ['F'];
+  const moves3 = ['F', 'B'];
   const moves = moves1.concat(moves2, moves3);
   const modifiers = ['', "'", '2'];
 
@@ -37,8 +37,8 @@ function generateWcaScramble() {
   }
 }
 
-function printScrambleMoves() {
-  const displayedScramble = document.getElementById('scramble').textContent;
+function printScrambleMoves(scr, shouldReset = true) {
+  const displayedScramble = scr
   const moves = displayedScramble.split(' ');
 
   const moveFunctions = {
@@ -59,10 +59,19 @@ function printScrambleMoves() {
     "F2": () => { F(); F(); },
     "B": B,
     "B'": () => { B(); B(); B(); },
-    "B2": () => { B(); B(); }
+    "B2": () => { B(); B(); },
+    "y": y,
+    "y'": () => { y(); y(); y(); },
+    "y2": () => { y(); y(); },
+    "x": x,
+    "x'": () => { x(); x(); x(); },
+    "x2": () => { x(); x(); },
+    "z": z,
+    "z'": () => { z(); z(); z(); },
+    "z2": () => { z(); z(); }
   };
 
-  resetCube();
+  if (shouldReset) resetCube();
 
   moves.forEach(move => {
     const func = moveFunctions[move];
@@ -74,6 +83,6 @@ function printScrambleMoves() {
 
 export {
   scramble,
-  generateWcaScramble,
+  genRanState,
   printScrambleMoves
 };

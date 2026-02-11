@@ -16,6 +16,69 @@ function rotateFaceCW(face) {
    face[8], face[5], face[2]];
 }
 
+function rotateFaceCCW(face) {
+  rotateFaceCW(face);
+  rotateFaceCW(face);
+  rotateFaceCW(face);
+}
+
+function M() {
+  const u1 = cube.U[1], u4 = cube.U[4], u7 = cube.U[7];
+  const f1 = cube.F[1], f4 = cube.F[4], f7 = cube.F[7];
+  const d1 = cube.D[1], d4 = cube.D[4], d7 = cube.D[7];
+  const b7 = cube.B[7], b4 = cube.B[4], b1 = cube.B[1];
+
+  cube.F[1] = u1; cube.F[4] = u4; cube.F[7] = u7;
+  cube.D[1] = f1; cube.D[4] = f4; cube.D[7] = f7;
+  cube.B[7] = d1; cube.B[4] = d4; cube.B[1] = d7;
+  cube.U[1] = b7; cube.U[4] = b4; cube.U[7] = b1;
+}
+
+function E() {
+  const f3 = cube.F[3], f4 = cube.F[4], f5 = cube.F[5];
+  const r3 = cube.R[3], r4 = cube.R[4], r5 = cube.R[5];
+  const b3 = cube.B[3], b4 = cube.B[4], b5 = cube.B[5];
+  const l3 = cube.L[3], l4 = cube.L[4], l5 = cube.L[5];
+
+  cube.R[3] = f3; cube.R[4] = f4; cube.R[5] = f5;
+  cube.B[3] = r3; cube.B[4] = r4; cube.B[5] = r5;
+  cube.L[3] = b3; cube.L[4] = b4; cube.L[5] = b5;
+  cube.F[3] = l3; cube.F[4] = l4; cube.F[5] = l5;
+}
+
+function S() {
+  const u3 = cube.U[3], u4 = cube.U[4], u5 = cube.U[5];
+  const r1 = cube.R[1], r4 = cube.R[4], r7 = cube.R[7];
+  const d5 = cube.D[5], d4 = cube.D[4], d3 = cube.D[3];
+  const l7 = cube.L[7], l4 = cube.L[4], l1 = cube.L[1];
+
+  cube.R[1] = u3; cube.R[4] = u4; cube.R[7] = u5;
+  cube.D[5] = r1; cube.D[4] = r4; cube.D[3] = r7;
+  cube.L[7] = d5; cube.L[4] = d4; cube.L[1] = d3;
+  cube.U[3] = l7; cube.U[4] = l4; cube.U[5] = l1;
+}
+
+function x() {
+  R();
+  M(); M(); M(); // M'
+  L(); L(); L(); // L'
+}
+
+function y() {
+  U();
+  E(); E(); E(); // E'
+  D(); D(); D(); // D'
+}
+
+function z() {
+  F();
+  S();
+  B(); B(); B(); // B'
+}
+
+
+
+
 function resetCube() {
   cube.U.fill('W');
   cube.R.fill('R');
@@ -24,6 +87,28 @@ function resetCube() {
   cube.L.fill('O');
   cube.B.fill('B');
 }
+
+
+function cloneCubeState() {
+  return {
+    U: [...cube.U],
+    R: [...cube.R],
+    F: [...cube.F],
+    D: [...cube.D],
+    L: [...cube.L],
+    B: [...cube.B],
+  };
+}
+
+function restoreCubeState(state) {
+  cube.U = [...state.U];
+  cube.R = [...state.R];
+  cube.F = [...state.F];
+  cube.D = [...state.D];
+  cube.L = [...state.L];
+  cube.B = [...state.B];
+}
+
 
 /* YOUR MOVE FUNCTIONS (U, D, R, L, F, B) STAY HERE EXACTLY AS THEY ARE */
 function U() {
@@ -103,41 +188,21 @@ function F() {
 function B() {
   rotateFaceCW(cube.B);
 
-  const U = [cube.U[0], cube.U[1], cube.U[2]];
-  const R = [cube.R[2], cube.R[5], cube.R[8]];
-  const D = [cube.D[6], cube.D[7], cube.D[8]];
-  const L = [cube.L[0], cube.L[3], cube.L[6]];
+  const u0 = cube.U[0], u1 = cube.U[1], u2 = cube.U[2];
+  const r2 = cube.R[2], r5 = cube.R[5], r8 = cube.R[8];
+  const d8 = cube.D[8], d7 = cube.D[7], d6 = cube.D[6];
+  const l0 = cube.L[0], l3 = cube.L[3], l6 = cube.L[6];
 
-  // U -> L (reversed)
-  cube.L[0] = U[2];
-  cube.L[3] = U[1];
-  cube.L[6] = U[0];
-
-  // L -> D (reversed)
-  cube.D[6] = L[2];
-  cube.D[7] = L[1];
-  cube.D[8] = L[0];
-
-  // D -> R (reversed)
-  cube.R[2] = D[2];
-  cube.R[5] = D[1];
-  cube.R[8] = D[0];
-
-  // R -> U (reversed)
-  cube.U[0] = R[2];
-  cube.U[1] = R[1];
-  cube.U[2] = R[0];
+  cube.U[0] = r2; cube.U[1] = r5; cube.U[2] = r8;
+  cube.R[2] = d8; cube.R[5] = d7; cube.R[8] = d6;
+  cube.D[6] = l0; cube.D[7] = l3; cube.D[8] = l6;
+  cube.L[0] = u2; cube.L[3] = u1; cube.L[6] = u0;
 }
-
 
 export {
   cube,
-  rotateFaceCW,
   resetCube,
-  U,
-  D,
-  R,
-  L,
-  F,
-  B
+  cloneCubeState,
+  restoreCubeState,
+  U, D, R, L, F, B, x, y, z
 };
