@@ -6,6 +6,7 @@
   pointer-events: none;     /* allow clicks outside cube */
 }
 
+
 .grid-container {
   pointer-events: auto;     /* cube is clickable */
   display: grid;
@@ -15,12 +16,22 @@
   height: fit-content;
 }
 
+.debug-highlight {
+  outline: 5px solid magenta;
+  outline-offset: -5px;
+
+  position: relative;
+  z-index: 9999;
+
+  box-sizing: border-box;
+}
+
+
 
   .grid {
     display: grid;
     grid-template-columns: repeat(3, 60px); /* 3 columns of 60px each */
     gap: 5px; /* gap between the squares */
-    border: 2px solid black; /* Add a black border */
     margin: -2px;
     padding: 5px; /* Optional padding inside the border */
     background-color: black;
@@ -81,8 +92,8 @@
   display: block;
   position: relative;
   transform-style: preserve-3d;
-  width: 0;
-  height: 0;
+  width: 200px;
+  height: 200px;
 
   transform: rotateX(-25deg) rotateY(-35deg);
 }

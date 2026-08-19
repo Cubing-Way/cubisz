@@ -1,7 +1,16 @@
-import { resetCube, U, D, R, L, F, B, y, x, z } from "./cube.js";
-import { paintCubeFromStickers } from "./main.js";
+import { resetCube, U, D, R, L, F, B, M, E, S, y, x, z } from "./cube.js";
 
 let scramble = '';
+let _moveCount = 0;
+let _isFMC = false;
+
+function isFMC() {
+  return _isFMC;
+}
+
+function setFMC(value) {
+  _isFMC = Boolean(value);
+}
 
 function genRanState() {
   const moves1 = ['U', 'D'];
@@ -35,10 +44,17 @@ function genRanState() {
     secondLastMoveGroup = lastMoveGroup;
     lastMoveGroup = moveGroup;
   }
+
+  console.log(scramble)
 }
 
+function getMoveCount() {
+  return _moveCount;
+}
+
+
 function printScrambleMoves(scr, shouldReset = true) {
-  const displayedScramble = scr
+  const displayedScramble = scr;
   const moves = displayedScramble.split(' ');
 
   const moveFunctions = {
@@ -60,6 +76,33 @@ function printScrambleMoves(scr, shouldReset = true) {
     "B": B,
     "B'": () => { B(); B(); B(); },
     "B2": () => { B(); B(); },
+    "M": M,
+    "M'": () => { M(); M(); M(); },
+    "M2": () => { M(); M(); },
+    "E": E,
+    "E'": () => { E(); E(); E(); },
+    "E2": () => { E(); E(); },
+    "S": S,
+    "S'": () => { S(); S(); S(); },
+    "S2": () => { S(); S(); },
+    "Rw": () => { R(); M(); M(); M(); },
+    "Rw'": () => { R(); R(); R(); M(); },
+    "Rw2": () => { R(); R(); M(); M(); },
+    "Lw": () => { L(); M(); },
+    "Lw'": () => { L(); L(); L(); M(); M(); M(); },
+    "Lw2": () => { L(); L(); M(); M(); },
+    "Uw": () => { U(); E(); E(); E(); },
+    "Uw'": () => { U(); U(); U(); E(); },
+    "Uw2": () => { U(); U(); E(); E(); },
+    "Dw": () => { D(); E(); },
+    "Dw'": () => { D(); D(); D(); E(); E(); E(); },
+    "Dw2": () => { D(); D(); E(); E(); },
+    "Fw": () => { F(); S(); S(); S(); },
+    "Fw'": () => { S(); F(); F(); F(); },
+    "Fw2": () => { F(); F(); S(); S(); },
+    "Bw": () => { B(); S(); },
+    "Bw'": () => { S(); S(); S(); B(); B(); B(); },
+    "Bw2": () => { B(); B(); S(); S(); },
     "y": y,
     "y'": () => { y(); y(); y(); },
     "y2": () => { y(); y(); },
@@ -73,16 +116,24 @@ function printScrambleMoves(scr, shouldReset = true) {
 
   if (shouldReset) resetCube();
 
+  _moveCount = 0;
+
   moves.forEach(move => {
+    if (_isFMC && ["M", "M'", "M2", "E", "E'", "E2", "S", "S'", "S2"].includes(move)) return;
     const func = moveFunctions[move];
-    if (func) func();
+    if (func) {
+      func();
+      if (!["y", "y'", "y2", "x", "x'", "x2", "z", "z'", "z2"].includes(move)) _moveCount++;   // count only valid moves
+    }
   });
 
-  paintCubeFromStickers();
 }
 
 export {
   scramble,
+  getMoveCount,
   genRanState,
-  printScrambleMoves
+  printScrambleMoves,
+  isFMC,
+  setFMC
 };

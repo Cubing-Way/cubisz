@@ -16,6 +16,8 @@ function rotateFaceCW(face) {
    face[8], face[5], face[2]];
 }
 
+
+
 function rotateFaceCCW(face) {
   rotateFaceCW(face);
   rotateFaceCW(face);
@@ -52,10 +54,11 @@ function S() {
   const d5 = cube.D[5], d4 = cube.D[4], d3 = cube.D[3];
   const l7 = cube.L[7], l4 = cube.L[4], l1 = cube.L[1];
 
-  cube.R[1] = u3; cube.R[4] = u4; cube.R[7] = u5;
-  cube.D[5] = r1; cube.D[4] = r4; cube.D[3] = r7;
-  cube.L[7] = d5; cube.L[4] = d4; cube.L[1] = d3;
-  cube.U[3] = l7; cube.U[4] = l4; cube.U[5] = l1;
+  // S is defined with the same orientation as B, not F.
+  cube.L[7] = u3; cube.L[4] = u4; cube.L[1] = u5;
+  cube.D[5] = l7; cube.D[4] = l4; cube.D[3] = l1;
+  cube.R[1] = d5; cube.R[4] = d4; cube.R[7] = d3;
+  cube.U[3] = r1; cube.U[4] = r4; cube.U[5] = r7;
 }
 
 function x() {
@@ -72,12 +75,9 @@ function y() {
 
 function z() {
   F();
-  S();
+  S(); S(); S(); // S'
   B(); B(); B(); // B'
 }
-
-
-
 
 function resetCube() {
   cube.U.fill('W');
@@ -199,10 +199,24 @@ function B() {
   cube.L[0] = u2; cube.L[3] = u1; cube.L[6] = u0;
 }
 
+function isSolved() {
+  for (const face in cube) {
+    const first = cube[face][0];
+    for (let i = 1; i < 9; i++) {
+      if (cube[face][i] !== first) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+
 export {
   cube,
   resetCube,
   cloneCubeState,
   restoreCubeState,
-  U, D, R, L, F, B, x, y, z
+  isSolved,
+  U, D, R, L, F, B, x, y, z, M, E, S
 };
