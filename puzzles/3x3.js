@@ -62,21 +62,21 @@ function S3x3() {
 }
 
 function x3x3() {
-  R();
-  M(); M(); M(); // M'
-  L(); L(); L(); // L'
+  R3x3();
+  M3x3(); M3x3(); M3x3(); // M'
+  L3x3(); L3x3(); L3x3(); // L'
 }
 
 function y3x3() {
-  U();
-  E(); E(); E(); // E'
-  D(); D(); D(); // D'
+  U3x3();
+  E3x3(); E3x3(); E3x3(); // E'
+  D3x3(); D3x3(); D3x3(); // D'
 }
 
 function z3x3() {
-  F();
-  S(); S(); S(); // S'
-  B(); B(); B(); // B'
+  F3x3();
+  S3x3(); S3x3(); S3x3(); // S'
+  B3x3(); B3x3(); B3x3(); // B'
 }
 
 function reset3x3() {

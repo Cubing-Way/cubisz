@@ -55,7 +55,6 @@
   box-sizing: border-box;
 }
 
-
 .square {
   width: var(--sticker-size, 60px);
   height: var(--sticker-size, 60px);
@@ -63,31 +62,29 @@
   box-sizing: border-box;
 }
 
-
 .white-square {
-  background-color: white;
-}
-
-.orange-square {
-  background-color: orange;
-}
-
-.green-square {
-  background-color: green;
+  fill: white;
 }
 
 .red-square {
-  background-color: red;
+  fill: red;
 }
 
-.blue-square {
-  background-color: blue;
+.green-square {
+  fill: green;
 }
 
 .yellow-square {
-  background-color: yellow;
+  fill: yellow;
 }
 
+.orange-square {
+  fill: orange;
+}
+
+.blue-square {
+  fill: blue;
+}
 
 /* ========================= */
 /* CUBE NET POSITIONING */

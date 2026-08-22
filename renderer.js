@@ -27,6 +27,87 @@ const faceClasses = {
   D: "yellow-square"
 };
 
+const stickerCorners3x3 = {
+  0: {
+    bottomRight: 30
+  },
+
+  1: {
+    bottomLeft: 30,
+    bottomRight: 30
+  },
+
+  2: {
+    bottomLeft: 30
+  },
+
+  3: {
+    topRight: 30,
+    bottomRight: 30
+  },
+
+  4: {
+    topRight: 30,
+    topLeft: 30,
+    bottomLeft: 30,
+    bottomRight: 30,
+  },
+
+  5: {
+    topLeft: 30,
+    bottomLeft: 30
+  },
+
+  6: {
+    topRight: 30,
+  },
+
+  7: {
+    topRight: 30,
+    topLeft: 30
+  },  
+
+  8: {
+    topLeft: 30,
+  }
+};
+
+const stickerCorners2x2 = {
+  0: {
+    bottomRight: 30
+  },
+
+  1: {
+    bottomLeft: 30
+  },
+
+  2: {
+    topRight: 30,
+  },
+
+  3: {
+    topLeft: 30,
+  }
+};
+
+
+/*
+ * Automatically adapt the renderer when the
+ * puzzle selector changes.
+ */
+const puzzleSelector =
+  document.getElementById("select-puzzle");
+
+if (puzzleSelector) {
+  puzzleSelector.addEventListener("change", () => {
+    console.log(
+      "[SELECTOR CHANGED]",
+      puzzleSelector.value
+    );
+
+    updateRenderer();
+  });
+}
 
 /**
  * Get the currently selected puzzle.
@@ -57,14 +138,48 @@ function injectCubeCSS() {
   document.head.appendChild(link);
 }
 
+function roundedSquarePath(
+  topLeft = 0,
+  topRight = 0,
+  bottomRight = 0,
+  bottomLeft = 0
+) {
+  return `
+    M ${topLeft} 0
 
-function createFace(face) {
+    H ${100 - topRight}
+    Q 100 0 100 ${topRight}
+
+    V ${100 - bottomRight}
+    Q 100 100 ${100 - bottomRight} 100
+
+    H ${bottomLeft}
+    Q 0 100 0 ${100 - bottomLeft}
+
+    V ${topLeft}
+    Q 0 0 ${topLeft} 0
+
+    Z
+  `;
+}
+function getStickerCorners(squareIndex, corners = {}) {
+  return {
+    topLeft: corners.topLeft ?? 0,
+    topRight: corners.topRight ?? 0,
+    bottomRight: corners.bottomRight ?? 0,
+    bottomLeft: corners.bottomLeft ?? 0
+  };
+}
+
+
+
+function createFace(face, selectedPuzzle) {
   console.log(
-  "[CREATE FACE]",
-  face,
-  "puzzle size:",
-  getPuzzleSize()
-);
+    "[CREATE FACE]",
+    face,
+    "puzzle size:",
+    getPuzzleSize()
+  );
 
   const grid = document.getElementById(faceGridIds[face]);
 
@@ -82,17 +197,47 @@ function createFace(face) {
     `repeat(${size}, var(--sticker-size))`;
 
   for (let i = 0; i < stickerCount; i++) {
-    const square = document.createElement("div");
+    const svg = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "svg"
+    );
 
-    square.className = `square ${faceClasses[face]}`;
+    svg.classList.add("square");
 
-    grid.appendChild(square);
+    svg.setAttribute("viewBox", "0 0 100 100");
+    svg.setAttribute("preserveAspectRatio", "none");
+
+    const path = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "path"
+    );
+
+    let corners
+    if (selectedPuzzle === "3x3Opt") {
+      corners = getStickerCorners(i,stickerCorners3x3[i]);
+    } else if (selectedPuzzle === "2x2Opt") {
+      corners = getStickerCorners(i,stickerCorners2x2[i]);
+    }
+
+
+    path.setAttribute(
+      "d",
+      roundedSquarePath(
+        corners.topLeft,
+        corners.topRight,
+        corners.bottomRight,
+        corners.bottomLeft
+      )
+    );
+
+    path.classList.add("sticker");
+
+    svg.appendChild(path);
+    grid.appendChild(svg);
   }
 
   return grid;
 }
-
-
 
 /**
  * Paint the cube according to its current state.
@@ -115,11 +260,17 @@ function paintCube() {
 
       if (!squares[i]) continue;
 
-      squares[i].className = `square ${color}-square`;
+      const path = squares[i].querySelector(".sticker");
+
+      if (path) {
+        path.setAttribute(
+          "class",
+          `sticker ${color}-square`
+        );
+      }
     }
   }
 }
-
 
 /**
  * Resize the cube renderer.
@@ -193,6 +344,7 @@ document.querySelectorAll(".grid").forEach((grid) => {
   document.querySelectorAll(".square").forEach((square) => {
     square.style.width = `${size}px`;
     square.style.height = `${size}px`;
+    square.style.display = "block";
   });
 }
 
@@ -226,7 +378,7 @@ async function mountRenderer(container) {
   `;
 
   for (const face of Object.keys(faceGridIds)) {
-    createFace(face);
+    createFace(face, puzzleSelector.value);
   }
 
   paintCube();
@@ -242,7 +394,7 @@ function updateRenderer() {
   const size = getPuzzleSize();
 
   for (const face of Object.keys(faceGridIds)) {
-    createFace(face);
+    createFace(face, puzzleSelector.value);
   }
 
   paintCube();
@@ -272,23 +424,8 @@ function set3D(enabled) {
 }
 
 
-/*
- * Automatically adapt the renderer when the
- * puzzle selector changes.
- */
-const puzzleSelector =
-  document.getElementById("select-puzzle");
 
-if (puzzleSelector) {
-  puzzleSelector.addEventListener("change", () => {
-    console.log(
-      "[SELECTOR CHANGED]",
-      puzzleSelector.value
-    );
 
-    updateRenderer();
-  });
-}
 
 
 
