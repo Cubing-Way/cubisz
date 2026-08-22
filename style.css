@@ -1,17 +1,21 @@
-.page-center, #cube-wrapper {
-  position: fixed;          /* remove from document flow */
-  inset: 0;                 /* full viewport */
+.page-center,
+#cube-wrapper {
+  position: fixed;
+  inset: 0;
+
   display: grid;
-  place-items: center;      /* true center */
-  pointer-events: none;     /* allow clicks outside cube */
+  place-items: center;
+
+  pointer-events: none;
 }
 
-
 .grid-container {
-  pointer-events: auto;     /* cube is clickable */
+  pointer-events: auto;
+
   display: grid;
   grid-template-columns: repeat(4, max-content);
   grid-template-rows: repeat(3, max-content);
+
   width: fit-content;
   height: fit-content;
 }
@@ -27,127 +31,222 @@
 }
 
 
+/* ========================= */
+/* CUBE NET */
+/* ========================= */
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(3, 60px); /* 3 columns of 60px each */
-    gap: 5px; /* gap between the squares */
-    margin: -2px;
-    padding: 5px; /* Optional padding inside the border */
-    background-color: black;
-  }
+.grid {
+  display: grid;
 
-  .square {
-    width: 58px; /* width of each square */
-    height: 60px; /* height of each square */
-  }
+  /*
+   * render.js controls whether this is
+   * a 2x2 or 3x3 grid.
+   */
+  grid-template-columns: repeat(3, var(--sticker-size));
+  grid-template-rows: repeat(3, var(--sticker-size));
 
-  .white-square {
-    background-color: white;
-  }
+  gap: var(--sticker-gap, 5px);
+  padding: var(--face-padding, 5px);
 
-  .orange-square {
-    background-color: orange;
-  }
+  margin: -2px;
 
-  .green-square {
-    background-color: green;
-  }
+  background-color: black;
 
-  .red-square {
-    background-color: red;
-  }
-
-  .blue-square {
-    background-color: blue;
-  }
-
-  .yellow-square {
-    background-color: yellow;
-  }
- 
+  box-sizing: border-box;
+}
 
 
-#whiteSquareGrid  { grid-column: 2; grid-row: 1; }
-#orangeSquareGrid { grid-column: 1; grid-row: 2; }
-#greenSquareGrid  { grid-column: 2; grid-row: 2; }
-#redSquareGrid    { grid-column: 3; grid-row: 2; }
-#blueSquareGrid   { grid-column: 4; grid-row: 2; }
-#yellowSquareGrid { grid-column: 2; grid-row: 3; }
+.square {
+  width: var(--sticker-size, 60px);
+  height: var(--sticker-size, 60px);
 
-#custom-scramble, #custom-solve {
+  box-sizing: border-box;
+}
+
+
+.white-square {
+  background-color: white;
+}
+
+.orange-square {
+  background-color: orange;
+}
+
+.green-square {
+  background-color: green;
+}
+
+.red-square {
+  background-color: red;
+}
+
+.blue-square {
+  background-color: blue;
+}
+
+.yellow-square {
+  background-color: yellow;
+}
+
+
+/* ========================= */
+/* CUBE NET POSITIONING */
+/* ========================= */
+
+#whiteSquareGrid {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+#orangeSquareGrid {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+#greenSquareGrid {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+#redSquareGrid {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+#blueSquareGrid {
+  grid-column: 4;
+  grid-row: 2;
+}
+
+#yellowSquareGrid {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+
+#custom-scramble,
+#custom-solve {
   width: 30%;
 }
 
+
 /* ========================= */
-/* 3D MODE (does NOT affect 2D) */
+/* 3D MODE */
 /* ========================= */
 
-.page-center{
-  perspective: 1000px; /* needed for 3D */
+.page-center {
+  perspective: 1000px;
 }
 
-/* when 3D is active, kill the grid layout */
-.cube3d .grid-container{
+
+/*
+ * When 3D is active, kill the
+ * 2D grid layout.
+ */
+.cube3d .grid-container {
   display: block;
+
   position: relative;
+
   transform-style: preserve-3d;
+
   width: 200px;
   height: 200px;
 
-  transform: rotateX(-25deg) rotateY(-35deg);
+  transform:
+    rotateX(-25deg)
+    rotateY(-35deg);
 }
 
 
-/* all faces stack in same origin */
-.cube3d .grid{
+/*
+ * All faces share the same origin.
+ */
+.cube3d .grid {
   position: absolute;
+
   top: 50%;
   left: 50%;
+
   transform-origin: center center;
+
   transition: transform 0.6s ease;
+
   background-color: black;
 }
 
-/* REAL cube depth (depends on sticker size) */
-:root{
+
+/*
+ * Cube depth is controlled by render.js.
+ */
+:root {
   --cube-depth: 48px;
 }
 
-/* FRONT (green) */
-.cube3d #greenSquareGrid{
-  transform: translate(-50%, -50%) rotateY(0deg) translateZ(var(--cube-depth));
+
+/* FRONT - green */
+.cube3d #greenSquareGrid {
+  transform:
+    translate(-50%, -50%)
+    rotateY(0deg)
+    translateZ(var(--cube-depth));
 }
 
-/* BACK (blue) */
-.cube3d #blueSquareGrid{
-  transform: translate(-50%, -50%) rotateY(180deg) translateZ(var(--cube-depth));
+
+/* BACK - blue */
+.cube3d #blueSquareGrid {
+  transform:
+    translate(-50%, -50%)
+    rotateY(180deg)
+    translateZ(var(--cube-depth));
 }
 
-/* RIGHT (red) */
-.cube3d #redSquareGrid{
-  transform: translate(-50%, -50%) rotateY(90deg) translateZ(var(--cube-depth));
+
+/* RIGHT - red */
+.cube3d #redSquareGrid {
+  transform:
+    translate(-50%, -50%)
+    rotateY(90deg)
+    translateZ(var(--cube-depth));
 }
 
-/* LEFT (orange) */
-.cube3d #orangeSquareGrid{
-  transform: translate(-50%, -50%) rotateY(-90deg) translateZ(var(--cube-depth));
+
+/* LEFT - orange */
+.cube3d #orangeSquareGrid {
+  transform:
+    translate(-50%, -50%)
+    rotateY(-90deg)
+    translateZ(var(--cube-depth));
 }
 
-/* TOP (white) */
-.cube3d #whiteSquareGrid{
-  transform: translate(-50%, -50%) rotateX(90deg) translateZ(var(--cube-depth));
+
+/* TOP - white */
+.cube3d #whiteSquareGrid {
+  transform:
+    translate(-50%, -50%)
+    rotateX(90deg)
+    translateZ(var(--cube-depth));
 }
 
-/* BOTTOM (yellow) */
-.cube3d #yellowSquareGrid{
-  transform: translate(-50%, -50%) rotateX(-90deg) translateZ(var(--cube-depth));
+
+/* BOTTOM - yellow */
+.cube3d #yellowSquareGrid {
+  transform:
+    translate(-50%, -50%)
+    rotateX(-90deg)
+    translateZ(var(--cube-depth));
 }
-/* FIX vertical centering ONLY in 3D mode */
-.cube3d.page-center{
+
+
+/*
+ * Vertical centering in 3D mode.
+ */
+.cube3d.page-center {
   position: fixed;
   inset: 0;
+
   display: flex;
+
   align-items: center;
   justify-content: center;
 }

@@ -1,4 +1,4 @@
-import { cube, resetCube, cloneCubeState, restoreCubeState, U, D, R, L, F, B } from './cube.js';
+import { cube, resetCube, cloneCubeState, restoreCubeState, U, D, R, L, F, B } from './puzzles/cube.js';
 import { applyScramble } from './api.js';
 import { getAllEdges } from './cubieMapping.js';
 

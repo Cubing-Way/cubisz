@@ -1,4 +1,4 @@
-import { resetCube, U, D, R, L, F, B, M, E, S, y, x, z } from "./cube.js";
+import { resetCube, U, D, R, L, F, B, M, E, S, y, x, z } from "./puzzles/cube.js";
 
 let scramble = '';
 let _moveCount = 0;

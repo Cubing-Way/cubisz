@@ -1,4 +1,4 @@
-import { cube, resetCube } from "./cube.js";
+import { cube, resetCube } from "./puzzles/cube.js";
 import {printScrambleMoves} from "./scramble.js";
 
 const CORNER_STICKERS = [

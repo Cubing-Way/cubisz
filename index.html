@@ -6,20 +6,28 @@
 <link rel="stylesheet" href="style.css">
   </head>
   <body>
+
     <button id="scramble-btn">Scramble</button>
     <input type="text" id="custom-scramble" placeholder="Enter custom scramble">
+
     <label for="fmc-toggle" class="checkbox-label">
       <input type="checkbox" id="fmc-toggle"> FMC mode
     </label>
+
     <button id="solve-btn">Solve</button>
     <input type="text" id="custom-solve" placeholder="Enter custom solution">
     <div id="cube-wrapper">
-<div id = "cube-net"></div>
+      <div id ="cube-net"></div>
     </div>
       </div>
     </div>
 
     <button id="toggle-3d">Toggle 3D</button>
+
+    <select id="select-puzzle">Puzzle
+      <option id="2x2Opt" value="2x2Opt">2x2</option>
+      <option id="3x3Opt" value="3x3Opt" selected>3x3</option>
+    </select>
 
       <script type="module" src="main.js"></script>
   </body>

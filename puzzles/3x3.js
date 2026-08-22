@@ -24,7 +24,7 @@ function rotateFaceCCW(face) {
   rotateFaceCW(face);
 }
 
-function M() {
+function M3x3() {
   const u1 = cube.U[1], u4 = cube.U[4], u7 = cube.U[7];
   const f1 = cube.F[1], f4 = cube.F[4], f7 = cube.F[7];
   const d1 = cube.D[1], d4 = cube.D[4], d7 = cube.D[7];
@@ -36,7 +36,7 @@ function M() {
   cube.U[1] = b7; cube.U[4] = b4; cube.U[7] = b1;
 }
 
-function E() {
+function E3x3() {
   const f3 = cube.F[3], f4 = cube.F[4], f5 = cube.F[5];
   const r3 = cube.R[3], r4 = cube.R[4], r5 = cube.R[5];
   const b3 = cube.B[3], b4 = cube.B[4], b5 = cube.B[5];
@@ -48,7 +48,7 @@ function E() {
   cube.F[3] = l3; cube.F[4] = l4; cube.F[5] = l5;
 }
 
-function S() {
+function S3x3() {
   const u3 = cube.U[3], u4 = cube.U[4], u5 = cube.U[5];
   const r1 = cube.R[1], r4 = cube.R[4], r7 = cube.R[7];
   const d5 = cube.D[5], d4 = cube.D[4], d3 = cube.D[3];
@@ -61,25 +61,25 @@ function S() {
   cube.U[3] = r1; cube.U[4] = r4; cube.U[5] = r7;
 }
 
-function x() {
+function x3x3() {
   R();
   M(); M(); M(); // M'
   L(); L(); L(); // L'
 }
 
-function y() {
+function y3x3() {
   U();
   E(); E(); E(); // E'
   D(); D(); D(); // D'
 }
 
-function z() {
+function z3x3() {
   F();
   S(); S(); S(); // S'
   B(); B(); B(); // B'
 }
 
-function resetCube() {
+function reset3x3() {
   cube.U.fill('W');
   cube.R.fill('R');
   cube.F.fill('G');
@@ -89,7 +89,7 @@ function resetCube() {
 }
 
 
-function cloneCubeState() {
+function clone3x3State() {
   return {
     U: [...cube.U],
     R: [...cube.R],
@@ -100,7 +100,7 @@ function cloneCubeState() {
   };
 }
 
-function restoreCubeState(state) {
+function restore3x3State(state) {
   cube.U = [...state.U];
   cube.R = [...state.R];
   cube.F = [...state.F];
@@ -111,7 +111,7 @@ function restoreCubeState(state) {
 
 
 /* YOUR MOVE FUNCTIONS (U, D, R, L, F, B) STAY HERE EXACTLY AS THEY ARE */
-function U() {
+function U3x3() {
   rotateFaceCW(cube.U);
 
   const f0 = cube.F[0], f1 = cube.F[1], f2 = cube.F[2];
@@ -125,7 +125,7 @@ function U() {
   cube.L[0] = f0; cube.L[1] = f1; cube.L[2] = f2;
 }
 
-function D() {
+function D3x3() {
   rotateFaceCW(cube.D);
 
   // Snapshot
@@ -141,7 +141,7 @@ function D() {
   cube.F[6] = l6; cube.F[7] = l7; cube.F[8] = l8;
 }
 
-function R() {
+function R3x3() {
   rotateFaceCW(cube.R);
 
   // Snapshot
@@ -157,7 +157,7 @@ function R() {
   cube.U[2] = f2; cube.U[5] = f5; cube.U[8] = f8;
 }
 
-function L() {
+function L3x3() {
   rotateFaceCW(cube.L);
 
   const u0 = cube.U[0], u3 = cube.U[3], u6 = cube.U[6];
@@ -171,7 +171,7 @@ function L() {
   cube.U[0] = b8; cube.U[3] = b5; cube.U[6] = b2;
 }
 
-function F() {
+function F3x3() {
   rotateFaceCW(cube.F);
 
   const u6 = cube.U[6], u7 = cube.U[7], u8 = cube.U[8];
@@ -185,7 +185,7 @@ function F() {
   cube.U[6] = l8; cube.U[7] = l5; cube.U[8] = l2;
 }
 
-function B() {
+function B3x3() {
   rotateFaceCW(cube.B);
 
   const u0 = cube.U[0], u1 = cube.U[1], u2 = cube.U[2];
@@ -199,7 +199,7 @@ function B() {
   cube.L[0] = u2; cube.L[3] = u1; cube.L[6] = u0;
 }
 
-function isSolved() {
+function is3x3Solved() {
   for (const face in cube) {
     const first = cube[face][0];
     for (let i = 1; i < 9; i++) {
@@ -211,12 +211,14 @@ function isSolved() {
   return true;
 }
 
+const cube3x3 = cube;
+
 
 export {
-  cube,
-  resetCube,
-  cloneCubeState,
-  restoreCubeState,
-  isSolved,
-  U, D, R, L, F, B, x, y, z, M, E, S
+  cube3x3,
+  reset3x3,
+  clone3x3State,
+  restore3x3State,
+  is3x3Solved,
+  U3x3, D3x3, R3x3, L3x3, F3x3, B3x3, x3x3, y3x3, z3x3, M3x3, E3x3, S3x3
 };

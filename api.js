@@ -1,8 +1,7 @@
 // api.js
-import { resetCube, cloneCubeState, restoreCubeState, isSolved } from "./cube.js";
+import { cloneCubeState, restoreCubeState, isSolved, selectPuzzle } from "./puzzles/cube.js";
 import { printScrambleMoves, getMoveCount, isFMC, setFMC } from "./scramble.js";
 import { mountRenderer, paintCube, resize, set3D } from "./renderer.js";
-import { readCorner, readEdge } from "./cubieMapping.js";
 let scrambledState = null;
 
 async function mountCube(div) {
@@ -38,6 +37,19 @@ function checkSolved() {
   return isSolved();
 }
 
+function puzzleSelect(puzzle) {
+  selectPuzzle(puzzle);
+}
 
 
-export { mountCube, setSize, setView, applyScramble, applySolution, getLastMoveCount, checkSolved, isFMC, setFMC }
+export { 
+  mountCube, 
+  setSize, 
+  setView, 
+  applyScramble, 
+  applySolution, 
+  getLastMoveCount, 
+  checkSolved, 
+  setFMC, 
+  puzzleSelect
+}
