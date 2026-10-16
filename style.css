@@ -1,6 +1,697 @@
-.page-center,
+/* ========================= */
+/* THEME */
+/* ========================= */
+
+/* Colors, radii, shadows and fonts for everything around the cube (light) */
+:root {
+  color-scheme: light dark;
+
+  --bg: #f3f2ee;
+  --surface: #ffffff;
+  --surface-2: #f6f5f2;
+  --stage: #eae8e2;
+  --stage-dot: #d6d3ca;
+  --border: #e2e0d9;
+  --border-strong: #cecbc1;
+  --text: #1d1c1a;
+  --text-muted: #6d6b64;
+  --accent: #1d1c1a;
+  --accent-hover: #3a3935;
+  --accent-text: #ffffff;
+  --focus: #3a6ff0;
+  --ok: #1d8a4e;
+  --ok-bg: #e2f4e9;
+  --error: #c2382c;
+  --error-bg: #fbe6e3;
+  --busy: #b7791f;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 1px 2px rgb(20 18 12 / 0.04), 0 6px 20px rgb(20 18 12 / 0.05);
+  --shadow-lg: 0 10px 40px rgb(20 18 12 / 0.18);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+
+  --topbar-height: 60px;
+}
+
+/* The same tokens for dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131312;
+    --surface: #1c1c1a;
+    --surface-2: #242422;
+    --stage: #2a2a27;
+    --stage-dot: #3a3a36;
+    --border: #2f2f2c;
+    --border-strong: #42423e;
+    --text: #ecebe6;
+    --text-muted: #9c9a92;
+    --accent: #ecebe6;
+    --accent-hover: #ffffff;
+    --accent-text: #161614;
+    --focus: #6f97ff;
+    --ok: #4cc983;
+    --ok-bg: #173325;
+    --error: #ff8a7d;
+    --error-bg: #3a1d19;
+    --busy: #e0a84a;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.25);
+    --shadow-lg: 0 10px 40px rgb(0 0 0 / 0.5);
+  }
+}
+
+
+/* ========================= */
+/* BASE */
+/* ========================= */
+
+/* Padding and borders inside every box's size */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Page: theme background, system font */
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hidden stays hidden, whatever display a class sets */
+[hidden] {
+  display: none !important;
+}
+
+/* Thin scrollbars in the theme's colors, for the panels that scroll on their own */
+.panel,
+#evaluation,
+.table-wrap {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Small line icons inside buttons and badges */
+.icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* ========================= */
+/* TOP BAR */
+/* ========================= */
+
+/* Bar across the top: name on the left, puzzle picker next to it */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: var(--topbar-height);
+  padding: 0 24px;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Name with its logo */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Logo: four stickers */
+.brand-mark {
+  width: 24px;
+  height: 24px;
+}
+
+
+/* ========================= */
+/* LAYOUT */
+/* ========================= */
+
+/* Controls on the left, cube on the right, filling the window under the top bar */
+.workspace {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-areas: "panel stage";
+  gap: 16px;
+  height: calc(100dvh - var(--topbar-height));
+  padding: 16px 24px 24px;
+}
+
+/* With an evaluation on wide screens: a third column for it, beside the cube */
+@media (min-width: 1360px) {
+  .workspace:has(#evaluation:not(:empty)) {
+    grid-template-columns: 340px minmax(440px, 1fr) minmax(520px, 1.2fr);
+    grid-template-areas: "panel stage eval";
+  }
+}
+
+/* Controls column: cards stacked, scrolling on its own when taller than the window */
+.panel {
+  grid-area: panel;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow: auto;
+}
+
+
+/* ========================= */
+/* CARDS */
+/* ========================= */
+
+/* A white box around one group of controls */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* Card title row: title on the left, a button or chip on the right */
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+}
+
+/* Card titles: small caps-style labels */
+.card-head h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+
+/* ========================= */
+/* INPUTS */
+/* ========================= */
+
+/* Move boxes: monospace, growing with their text where the browser can */
+.moves-input {
+  width: 100%;
+  min-height: 64px;
+  max-height: 180px;
+  padding: 10px 12px;
+  field-sizing: content;
+  resize: none;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: 14px/1.6 var(--font-mono);
+  word-spacing: 0.1em;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+/* Placeholder: the sans font, dimmed */
+.moves-input::placeholder {
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  opacity: 0.8;
+}
+
+/* Focused move box: accent ring */
+.moves-input:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 22%, transparent);
+}
+
+
+/* ========================= */
+/* BUTTONS */
+/* ========================= */
+
+/* Plain button: outlined, icon and label side by side */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 14px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font: 600 13.5px/1 var(--font-sans);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, border-color 0.15s, transform 0.05s, opacity 0.15s;
+}
+
+/* Hover: a shade darker */
+.btn:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+/* Pressed: nudged down */
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Keyboard focus: accent ring */
+.btn:focus-visible,
+.close:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Disabled: faded, no pointer */
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Main action: filled with the ink color */
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: transparent;
+}
+
+/* Main action hover: a touch lighter */
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+/* Quiet button: no border or fill until hovered */
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+/* Quiet button hover: text at full strength */
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text);
+}
+
+/* Small button, for card title rows */
+.btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+
+/* Busy button: a spinner in place of its icon */
+.btn.is-busy .icon {
+  display: none;
+}
+
+.btn.is-busy::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Busy button stays readable while disabled */
+.btn.is-busy:disabled {
+  opacity: 0.8;
+  cursor: progress;
+}
+
+/* Solver buttons: Solve and Cross side by side, Evaluate across the full width */
+.actions {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 8px;
+}
+
+/* A button across the whole actions grid */
+.btn-wide {
+  grid-column: 1 / -1;
+}
+
+
+/* ========================= */
+/* PICKERS */
+/* ========================= */
+
+/* Segmented picker (puzzle, view): a track with the picked option raised */
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+}
+
+/* One option: its radio stretched invisibly over it */
+.segmented label {
+  position: relative;
+  cursor: pointer;
+}
+
+.segmented input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Option label */
+.segmented span {
+  display: block;
+  padding: 5px 14px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+/* Hovered option: full-strength text */
+.segmented label:hover span {
+  color: var(--text);
+}
+
+/* Picked option: raised card look */
+.segmented input:checked + span {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.1), 0 0 0 1px var(--border);
+}
+
+/* Keyboard focus on an option */
+.segmented input:focus-visible + span {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* Smaller segmented picker, for the stage */
+.segmented-sm span {
+  padding: 3px 11px;
+  font-size: 12px;
+}
+
+/* Method row: label on the left, picker on the right */
+.method-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Method label: like the card titles, a size up */
+.method-row > label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* Method picker: a select dressed as a button, with a chevron */
+.select-btn {
+  position: relative;
+  flex: 1;
+  max-width: 200px;
+}
+
+.select-btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 13px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+.select-btn select {
+  appearance: none;
+  width: 100%;
+  height: 36px;
+  padding: 0 34px 0 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font: 600 13.5px/1 var(--font-sans);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+/* Method picker hover and focus */
+.select-btn select:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.select-btn select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Method picker disabled (on the 2x2) */
+.select-btn select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* FMC switch: a sliding toggle with its label */
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* The real checkbox: invisible, still focusable */
+.switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+/* Switch track */
+.switch-track {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  background: var(--border-strong);
+  border-radius: 999px;
+  transition: background 0.15s;
+}
+
+/* Switch knob */
+.switch-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: transform 0.15s;
+}
+
+/* Switch on: accent track, knob slid right */
+.switch input:checked + .switch-track {
+  background: var(--focus);
+}
+
+.switch input:checked + .switch-track::after {
+  transform: translateX(14px);
+}
+
+/* Switch keyboard focus */
+.switch input:focus-visible + .switch-track {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Switch label, with its note dimmed after it */
+.switch-text {
+  font-size: 13.5px;
+  font-weight: 550;
+}
+
+.switch-text small {
+  margin-left: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+
+/* ========================= */
+/* CHIPS, BADGES, STATUS */
+/* ========================= */
+
+/* Move count chip next to the Solution title */
+.chip {
+  padding: 2px 9px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font: 600 12px/1.5 var(--font-mono);
+}
+
+/* Solved badge on the stage */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px 4px 8px;
+  background: var(--ok-bg);
+  color: var(--ok);
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 650;
+  animation: pop-in 0.25s ease-out;
+}
+
+/* Status line: a colored dot, then the message */
+.status {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* Hidden while there's no message */
+.status:empty {
+  display: none;
+}
+
+/* The dot, colored by the message's tone */
+.status::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  background: var(--text-muted);
+  border-radius: 50%;
+}
+
+.status[data-tone="ok"]::before {
+  background: var(--ok);
+}
+
+.status[data-tone="busy"]::before {
+  background: var(--busy);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.status[data-tone="error"] {
+  color: var(--error);
+}
+
+.status[data-tone="error"]::before {
+  background: var(--error);
+}
+
+
+/* ========================= */
+/* STAGE */
+/* ========================= */
+
+/* The cube's area: a dotted backdrop filling its column */
+.stage {
+  grid-area: stage;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background-color: var(--stage);
+  background-image: radial-gradient(circle, var(--stage-dot) 1.1px, transparent 1.4px);
+  background-size: 22px 22px;
+  background-position: 11px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Stage top row: view picker on the left, solved badge on the right */
+.stage-bar {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+/* Stage top row's controls stay clickable */
+.stage-bar > * {
+  pointer-events: auto;
+}
+
+/* View picker: raised off the dotted backdrop */
+.stage-bar .segmented {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+/* Cube area inside the stage: the cube centered in it */
 #cube-wrapper {
-  position: fixed;
+  position: relative;
+  flex: 1;
+  min-height: 340px;
+}
+
+/* Cube centering layer, over the whole cube area */
+.page-center {
+  position: absolute;
   inset: 0;
 
   display: grid;
@@ -8,6 +699,11 @@
 
   pointer-events: none;
 }
+
+
+/* ========================= */
+/* CUBE (unchanged) */
+/* ========================= */
 
 .grid-container {
   pointer-events: auto;
@@ -118,12 +814,6 @@
 #yellowSquareGrid {
   grid-column: 2;
   grid-row: 3;
-}
-
-
-#custom-scramble,
-#custom-solve {
-  width: 30%;
 }
 
 
@@ -246,4 +936,320 @@
 
   align-items: center;
   justify-content: center;
+}
+
+
+/* ========================= */
+/* SOLUTION EVALUATION */
+/* ========================= */
+
+/* Results panel: a card in its own column on wide screens, scrolling on its own */
+#evaluation {
+  grid-area: eval;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 18px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  animation: fade-in 0.2s ease-out;
+}
+
+/* Hidden while there's nothing in it */
+#evaluation:empty {
+  display: none;
+}
+
+/* Narrower screens: a drawer sliding in over the cube from the right */
+@media (max-width: 1359px) {
+  #evaluation {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    width: min(680px, 100vw);
+    border-width: 0 0 0 1px;
+    border-radius: 0;
+    box-shadow: var(--shadow-lg);
+    animation: slide-in 0.25s ease-out;
+  }
+}
+
+/* While evaluating: the progress message centered next to a spinner */
+#evaluation.is-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 160px;
+  padding: 24px;
+  color: var(--text-muted);
+}
+
+#evaluation.is-loading::before {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Header: title and close button, kept in view while the panel scrolls */
+#evaluation .eval-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 -18px 14px;
+  padding: 16px 18px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Title: the method's name, under a small "Evaluation" label */
+#evaluation h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+#evaluation .eyebrow {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+/* Close button: a small square with the × */
+#evaluation .close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+#evaluation .close:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* Table box: rounded border, scrolling sideways when the panel is narrower than the table */
+#evaluation .table-wrap {
+  margin-bottom: 16px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+/* Tables: full width, rows split by lines */
+#evaluation table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* The per-step table keeps its columns readable */
+#evaluation .per-step {
+  min-width: 600px;
+}
+
+/* Cells: top-aligned, a line under each row */
+#evaluation th,
+#evaluation td {
+  padding: 9px 11px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+
+/* No line under the last row (the box's border closes it) */
+#evaluation tr:last-child > * {
+  border-bottom: 0;
+}
+
+/* Header row: small dimmed caps on a tinted strip */
+#evaluation tr:first-child > th {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Row titles (step names, "Yours"…) */
+#evaluation tr + tr > th {
+  font-weight: 650;
+  min-width: 90px;
+}
+
+/* Move text and fingertricks: monospace, wrapping */
+#evaluation .moves,
+#evaluation pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Count and speed under the moves: smaller and dimmer */
+#evaluation .score {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+
+/* Fingertricks fold: a small link-like toggle */
+#evaluation details {
+  margin-top: 4px;
+}
+
+#evaluation summary {
+  width: fit-content;
+  color: var(--focus);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Opened fingertricks: a tinted block */
+#evaluation details pre {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+/* You vs engine figures: green when yours did better, red when worse */
+#evaluation .delta {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+#evaluation .delta.better {
+  color: var(--ok);
+}
+
+#evaluation .delta.worse {
+  color: var(--error);
+}
+
+#evaluation .delta.even {
+  color: var(--text-muted);
+}
+
+
+/* ========================= */
+/* SMALL SCREENS */
+/* ========================= */
+
+/* Phones and narrow windows: cube on top, controls under it, the page scrolling as a whole */
+@media (max-width: 760px) {
+  .topbar {
+    gap: 12px;
+    padding: 0 16px;
+    justify-content: space-between;
+  }
+
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "stage"
+      "panel";
+    height: auto;
+    padding: 12px 16px 24px;
+  }
+
+  .panel {
+    overflow: visible;
+  }
+
+  #cube-wrapper {
+    min-height: 300px;
+  }
+
+  .stage-bar {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+  }
+}
+
+
+/* ========================= */
+/* ANIMATIONS */
+/* ========================= */
+
+/* Spinner turn */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Busy dot breathing */
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Badge popping in */
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* Evaluation column fading in */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Evaluation drawer sliding in */
+@keyframes slide-in {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+}
+
+/* No entrance or spinner motion for people who asked for less (the cube's own 3D turn is left alone) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

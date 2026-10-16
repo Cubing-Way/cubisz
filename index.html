@@ -1,34 +1,125 @@
 <!DOCTYPE html>
-  <html lang="en">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>cubisz</title>
-<link rel="stylesheet" href="style.css">
-  </head>
-  <body>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>cubisz</title>
+  <!-- Tab icon: the same four stickers as the logo -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='2' y='2' width='9' height='9' rx='2.5' fill='%23e5483b'/><rect x='13' y='2' width='9' height='9' rx='2.5' fill='%232f9e5b'/><rect x='2' y='13' width='9' height='9' rx='2.5' fill='%232f6fd6'/><rect x='13' y='13' width='9' height='9' rx='2.5' fill='%23f2b92e'/></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-    <button id="scramble-btn">Scramble</button>
-    <input type="text" id="custom-scramble" placeholder="Enter custom scramble">
+  <!-- Top bar: name and puzzle picker -->
+  <header class="topbar">
+    <a class="brand" href="./">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2" y="2" width="9" height="9" rx="2.5" fill="#e5483b"/>
+        <rect x="13" y="2" width="9" height="9" rx="2.5" fill="#2f9e5b"/>
+        <rect x="2" y="13" width="9" height="9" rx="2.5" fill="#2f6fd6"/>
+        <rect x="13" y="13" width="9" height="9" rx="2.5" fill="#f2b92e"/>
+      </svg>
+      <span>cubisz</span>
+    </a>
 
-    <label for="fmc-toggle" class="checkbox-label">
-      <input type="checkbox" id="fmc-toggle"> FMC mode
-    </label>
-
-    <button id="solve-btn">Solve</button>
-    <input type="text" id="custom-solve" placeholder="Enter custom solution">
-    <div id="cube-wrapper">
-      <div id ="cube-net"></div>
+    <!-- Puzzle picker: these buttons set the hidden select below -->
+    <div class="segmented" role="radiogroup" aria-label="Puzzle">
+      <label><input type="radio" name="puzzle" value="2x2Opt" autocomplete="off"><span>2×2</span></label>
+      <label><input type="radio" name="puzzle" value="3x3Opt" autocomplete="off" checked><span>3×3</span></label>
     </div>
-      </div>
-    </div>
 
-    <button id="toggle-3d">Toggle 3D</button>
-
-    <select id="select-puzzle">Puzzle
+    <!-- The puzzle select renderer.js and main.js read: hidden, driven by the buttons above -->
+    <select id="select-puzzle" autocomplete="off" hidden>
       <option id="2x2Opt" value="2x2Opt">2x2</option>
       <option id="3x3Opt" value="3x3Opt" selected>3x3</option>
     </select>
+  </header>
 
-      <script type="module" src="main.js"></script>
-  </body>
+  <main class="workspace">
+
+    <!-- Controls: scramble, solution and solver -->
+    <aside class="panel">
+
+      <!-- Scramble: random or typed, and FMC mode -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Scramble</h2>
+          <button id="scramble-btn" class="btn btn-ghost btn-sm" type="button">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+            New
+          </button>
+        </div>
+        <textarea id="custom-scramble" class="moves-input" rows="2" placeholder="Type or paste a scramble" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Scramble"></textarea>
+
+        <!-- FMC mode switch -->
+        <label class="switch">
+          <input type="checkbox" id="fmc-toggle" autocomplete="off">
+          <span class="switch-track" aria-hidden="true"></span>
+          <span class="switch-text">FMC mode <small>ignores slice moves</small></span>
+        </label>
+      </section>
+
+      <!-- Solution: typed or from the solver, then evaluated -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Solution</h2>
+          <span id="move-count" class="chip" hidden></span>
+        </div>
+        <textarea id="custom-solve" class="moves-input" rows="2" placeholder="Type a solution to play it on the cube" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Solution"></textarea>
+
+        <!-- Method picker: the method Solve and Evaluate use -->
+        <div class="method-row">
+          <label for="select-method">Method</label>
+          <div class="select-btn">
+            <select id="select-method" autocomplete="off">
+              <option value="cfop" selected>CFOP</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Solver buttons -->
+        <div class="actions">
+          <button id="solve-btn" class="btn btn-primary" type="button">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>
+            Solve
+          </button>
+          <button id="cross-btn" class="btn" type="button">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>
+            Cross
+          </button>
+          <button id="eval-btn" class="btn btn-wide" type="button">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M7 16v-5M12 16V5M17 16v-8"/></svg>
+            Evaluate solution
+          </button>
+        </div>
+
+        <!-- Solver status: engine loading, solving, results and errors -->
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </section>
+    </aside>
+
+    <!-- Stage: the cube, with its view toggle and solved badge -->
+    <section class="stage" aria-label="Cube">
+      <div class="stage-bar">
+        <div class="segmented segmented-sm" role="radiogroup" aria-label="View">
+          <label><input type="radio" name="view" value="2d" autocomplete="off" checked><span>2D</span></label>
+          <label><input type="radio" name="view" value="3d" autocomplete="off"><span>3D</span></label>
+        </div>
+        <span id="solved-badge" class="badge" hidden>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+          Solved
+        </span>
+      </div>
+      <div id="cube-wrapper">
+        <div id="cube-net"></div>
+      </div>
+    </section>
+
+    <!-- Evaluation results: hidden while empty (no whitespace inside, so :empty matches) -->
+    <aside id="evaluation" aria-label="Evaluation"></aside>
+  </main>
+
+  <script type="module" src="main.js"></script>
+</body>
 </html>
