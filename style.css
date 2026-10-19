@@ -21,12 +21,29 @@
   --focus: #3a6ff0;
   --ok: #1d8a4e;
   --ok-bg: #e2f4e9;
+  --warn: #a8670f;
+  --warn-bg: #fbf0dc;
   --error: #c2382c;
   --error-bg: #fbe6e3;
   --busy: #b7791f;
 
+  /* Hands under the move chips, and the engine's moves on the timeline */
+  --hand-right: #2f6fd6;
+  --hand-left: #e0782f;
+  --engine: #7a55e8;
+
+  /* One color per step of a method, in order (they repeat after eight) */
+  --step-0: #5b7cfa;
+  --step-1: #2fa37a;
+  --step-2: #d99a2b;
+  --step-3: #b462d4;
+  --step-4: #e2604f;
+  --step-5: #2ea2c2;
+  --step-6: #8c9a33;
+  --step-7: #d0679a;
+
   --radius: 14px;
-  --radius-sm: 9px;
+  --radius-sm: 10px;
   --shadow: 0 1px 2px rgb(20 18 12 / 0.04), 0 6px 20px rgb(20 18 12 / 0.05);
   --shadow-lg: 0 10px 40px rgb(20 18 12 / 0.18);
 
@@ -34,6 +51,7 @@
   --font-mono: ui-monospace, "Cascadia Mono", "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
 
   --topbar-height: 60px;
+  --page-width: 1280px;
 }
 
 /* The same tokens for dark mode */
@@ -54,9 +72,22 @@
     --focus: #6f97ff;
     --ok: #4cc983;
     --ok-bg: #173325;
+    --warn: #e7ae55;
+    --warn-bg: #3a2c15;
     --error: #ff8a7d;
     --error-bg: #3a1d19;
     --busy: #e0a84a;
+    --hand-right: #6f9bff;
+    --hand-left: #f39a57;
+    --engine: #a58bff;
+    --step-0: #7f98ff;
+    --step-1: #4cc193;
+    --step-2: #e9b04b;
+    --step-3: #c886e3;
+    --step-4: #f07f70;
+    --step-5: #52bedb;
+    --step-6: #aab84f;
+    --step-7: #e486b2;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.25);
     --shadow-lg: 0 10px 40px rgb(0 0 0 / 0.5);
   }
@@ -89,14 +120,6 @@ body {
   display: none !important;
 }
 
-/* Thin scrollbars in the theme's colors, for the panels that scroll on their own */
-.panel,
-#evaluation,
-.table-wrap {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
-}
-
 /* Small line icons inside buttons and badges */
 .icon {
   width: 16px;
@@ -114,19 +137,15 @@ body {
 /* TOP BAR */
 /* ========================= */
 
-/* Bar across the top: name on the left, puzzle picker next to it */
+/* Bar across the top, on the page's centered width: name and what it does on the left, puzzle picker on the right */
 .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
+  max-width: var(--page-width);
   height: var(--topbar-height);
-  padding: 0 24px;
-  background: color-mix(in srgb, var(--bg) 85%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
 /* Name with its logo */
@@ -147,49 +166,76 @@ body {
   height: 24px;
 }
 
+/* What the app does, beside its name */
+.tagline {
+  padding-left: 14px;
+  border-left: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 550;
+}
+
+/* Right end of the bar: cube side and puzzle pickers side by side */
+.topbar-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
 
 /* ========================= */
 /* LAYOUT */
 /* ========================= */
 
-/* Controls on the left, cube on the right, filling the window under the top bar */
-.workspace {
+/* Two columns: the cube and its player on the left (staying in view), your solve and its review on the right */
+.app {
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
-  grid-template-areas: "panel stage";
-  gap: 16px;
-  height: calc(100dvh - var(--topbar-height));
-  padding: 16px 24px 24px;
+  grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 0 20px 40px;
 }
 
-/* With an evaluation on wide screens: a third column for it, beside the cube */
-@media (min-width: 1360px) {
-  .workspace:has(#evaluation:not(:empty)) {
-    grid-template-columns: 340px minmax(440px, 1fr) minmax(520px, 1.2fr);
-    grid-template-areas: "panel stage eval";
-  }
+/* Cube on the right (the Cube right picker): the columns swapped */
+.app.cube-right {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
 }
 
-/* Controls column: cards stacked, scrolling on its own when taller than the window */
-.panel {
-  grid-area: panel;
+.app.cube-right .viewer {
+  order: 2;
+}
+
+/* Left column: stage over player, sticking under the top of the window while the right column scrolls */
+.viewer {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Right column: the solve card, the tabs and their panels */
+.work {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-height: 0;
-  overflow: auto;
+  min-width: 0;
 }
 
 
 /* ========================= */
-/* CARDS */
+/* CARDS AND FIELDS */
 /* ========================= */
 
-/* A white box around one group of controls */
+/* A raised box (your solve, the step solver) */
 .card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   padding: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -197,8 +243,16 @@ body {
   box-shadow: var(--shadow);
 }
 
-/* Card title row: title on the left, a button or chip on the right */
-.card-head {
+/* One field: its label row over its control */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Field label row: the label on the left, tools or a note on the right */
+.field-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -206,14 +260,107 @@ body {
   min-height: 28px;
 }
 
-/* Card titles: small caps-style labels */
-.card-head h2 {
-  margin: 0;
-  font-size: 12px;
+/* Field labels: strong, with an optional dimmed note */
+.field-head > label,
+.field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
   font-weight: 650;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+}
+
+.field-label small {
+  font-size: 11px;
+  font-weight: 400;
   color: var(--text-muted);
+}
+
+/* Slow-method warning beside the Method label */
+.field-label small.warn {
+  color: var(--busy);
+  font-weight: 600;
+}
+
+/* The numbers that walk you through: 1 scramble, 2 solution, 3 review */
+.num {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* The number inside the primary button: on its dark fill */
+.num-inline {
+  margin-right: 8px;
+  background: color-mix(in srgb, var(--accent-text) 18%, transparent);
+  border-color: transparent;
+  color: inherit;
+}
+
+/* Tools in a field's label row: a switch and a button */
+.field-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* A switch in a label row: label as small as the button next to it */
+.field-tools .switch-text {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* Note beside "Your solution": move count, and whether it solves the cube */
+.field-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.field-note[data-tone="ok"] {
+  color: var(--ok);
+}
+
+.field-note[data-tone="warn"] {
+  color: var(--warn);
+}
+
+/* Method and time fields: the method takes the room */
+.fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px;
+  gap: 10px;
+}
+
+/* Offer under the solution box to swap S and S' */
+.slice-hint {
+  margin-top: 2px;
+}
+
+/* The picked method's note under the pickers */
+.method-note {
+  margin: -6px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.method-note:empty {
+  display: none;
+}
+
+/* The review button with the engine's status beside it */
+.solve-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
 }
 
 
@@ -224,11 +371,11 @@ body {
 /* Move boxes: monospace, growing with their text where the browser can */
 .moves-input {
   width: 100%;
-  min-height: 64px;
-  max-height: 180px;
+  min-height: 44px;
+  max-height: 220px;
   padding: 10px 12px;
   field-sizing: content;
-  resize: none;
+  resize: vertical;
   background: var(--surface-2);
   color: var(--text);
   border: 1px solid var(--border);
@@ -236,6 +383,11 @@ body {
   font: 14px/1.6 var(--font-mono);
   word-spacing: 0.1em;
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+/* The solution box starts taller: a few lines of a reconstruction */
+#custom-solve {
+  min-height: 88px;
 }
 
 /* Placeholder: the sans font, dimmed */
@@ -271,6 +423,7 @@ body {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   font: 600 13.5px/1 var(--font-sans);
+  white-space: nowrap;
   cursor: pointer;
   user-select: none;
   transition: background 0.15s, border-color 0.15s, transform 0.05s, opacity 0.15s;
@@ -288,7 +441,9 @@ body {
 
 /* Keyboard focus: accent ring */
 .btn:focus-visible,
-.close:focus-visible {
+.tab:focus-visible,
+.step-head:focus-visible,
+.timeline:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
@@ -323,11 +478,38 @@ body {
   color: var(--text);
 }
 
-/* Small button, for card title rows */
+/* Small button, for label rows and cards */
 .btn-sm {
-  height: 28px;
-  padding: 0 10px;
+  height: 30px;
+  padding: 0 11px;
   font-size: 12.5px;
+}
+
+/* Small buttons' icons a little smaller */
+.btn-sm .icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Large button: the main action of the page */
+.btn-lg {
+  height: 44px;
+  padding: 0 18px 0 14px;
+  font-size: 14.5px;
+}
+
+/* Round icon-only button (the player's buttons) */
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+/* The play button, bigger than the others */
+.btn-play {
+  width: 40px;
+  height: 40px;
 }
 
 /* Busy button: a spinner in place of its icon */
@@ -349,18 +531,6 @@ body {
 .btn.is-busy:disabled {
   opacity: 0.8;
   cursor: progress;
-}
-
-/* Solver buttons: Solve and Cross side by side, Evaluate across the full width */
-.actions {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 8px;
-}
-
-/* A button across the whole actions grid */
-.btn-wide {
-  grid-column: 1 / -1;
 }
 
 
@@ -427,42 +597,6 @@ body {
   font-size: 12px;
 }
 
-/* Method and time fields: two columns */
-.fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-/* One field: its label over its control */
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-/* Field labels, with an optional dimmed note */
-.field > label {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.field > label small {
-  margin-left: 3px;
-  font-size: 11px;
-  font-weight: 400;
-  opacity: 0.8;
-}
-
-/* Slow-method warning beside the Method label: amber, like the busy status */
-.field > label small.warn {
-  color: var(--busy);
-  font-weight: 600;
-  opacity: 1;
-}
-
 /* Time box: a monospace input with an "s" after the number */
 .time-input {
   position: relative;
@@ -470,7 +604,7 @@ body {
 
 .time-input input {
   width: 100%;
-  height: 36px;
+  height: 38px;
   padding: 0 26px 0 12px;
   background: var(--surface-2);
   color: var(--text);
@@ -509,7 +643,7 @@ body {
   border-color: var(--error);
 }
 
-/* Method picker: a select dressed as a button, with a chevron */
+/* Pickers (method, step): a select dressed as a button, with a chevron */
 .select-btn {
   position: relative;
 }
@@ -530,18 +664,19 @@ body {
 .select-btn select {
   appearance: none;
   width: 100%;
-  height: 36px;
+  height: 38px;
   padding: 0 34px 0 12px;
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   font: 600 13.5px/1 var(--font-sans);
+  text-overflow: ellipsis;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
 
-/* Method picker hover and focus */
+/* Picker hover and focus */
 .select-btn select:hover:not(:disabled) {
   background: var(--surface-2);
 }
@@ -551,17 +686,17 @@ body {
   outline-offset: 2px;
 }
 
-/* Method picker disabled (on the 2x2) */
+/* Picker disabled (on the 2x2) */
 .select-btn select:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-/* FMC switch: a sliding toggle with its label */
+/* Switches (FMC, fingertricks): a sliding toggle with its label */
 .switch {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   cursor: pointer;
   user-select: none;
 }
@@ -578,8 +713,8 @@ body {
 .switch-track {
   position: relative;
   flex: none;
-  width: 34px;
-  height: 20px;
+  width: 30px;
+  height: 18px;
   background: var(--border-strong);
   border-radius: 999px;
   transition: background 0.15s;
@@ -591,8 +726,8 @@ body {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   background: #fff;
   border-radius: 50%;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
@@ -605,7 +740,7 @@ body {
 }
 
 .switch input:checked + .switch-track::after {
-  transform: translateX(14px);
+  transform: translateX(12px);
 }
 
 /* Switch keyboard focus */
@@ -614,33 +749,16 @@ body {
   outline-offset: 2px;
 }
 
-/* Switch label, with its note dimmed after it */
+/* Switch label */
 .switch-text {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 550;
 }
 
-.switch-text small {
-  margin-left: 4px;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 400;
-}
-
 
 /* ========================= */
-/* CHIPS, BADGES, STATUS */
+/* BADGES AND STATUS */
 /* ========================= */
-
-/* Move count chip next to the Solution title */
-.chip {
-  padding: 2px 9px;
-  background: var(--surface-2);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font: 600 12px/1.5 var(--font-mono);
-}
 
 /* Solved badge on the stage */
 .badge {
@@ -705,14 +823,13 @@ body {
 /* STAGE */
 /* ========================= */
 
-/* The cube's area: a dotted backdrop filling its column */
+/* The cube's area: a dotted backdrop, as tall as the window allows */
 .stage {
-  grid-area: stage;
   position: relative;
   display: flex;
   flex-direction: column;
+  height: clamp(280px, calc(100vh - 260px), 440px);
   min-width: 0;
-  min-height: 0;
   background-color: var(--stage);
   background-image: radial-gradient(circle, var(--stage-dot) 1.1px, transparent 1.4px);
   background-size: 22px 22px;
@@ -725,9 +842,9 @@ body {
 /* Stage top row: view picker on the left, solved badge on the right */
 .stage-bar {
   position: absolute;
-  top: 14px;
-  left: 14px;
-  right: 14px;
+  top: 12px;
+  left: 12px;
+  right: 12px;
   z-index: 2;
   display: flex;
   align-items: center;
@@ -751,8 +868,242 @@ body {
 #cube-wrapper {
   position: relative;
   flex: 1;
-  min-height: 340px;
+  min-height: 0;
 }
+
+/* Banner at the bottom of the stage while the engine's moves are on show */
+.preview-banner {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 24px);
+  padding: 5px 5px 5px 12px;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--engine) 45%, var(--border));
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  white-space: nowrap;
+  animation: hint-in 0.2s ease-out;
+}
+
+/* Its label cut with … when the stage is narrow */
+.preview-banner > span:not(.preview-dot) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The engine's dot, breathing */
+.preview-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  background: var(--engine);
+  border-radius: 50%;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+/* The banner's button: round like the banner */
+.preview-banner .btn {
+  border-radius: 999px;
+}
+
+
+/* ========================= */
+/* PLAYER */
+/* ========================= */
+
+/* The box under the stage: timeline, its labels, then the buttons and readout */
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 12px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* Timeline: a bar of steps with a cursor, dragged to scrub */
+.timeline {
+  position: relative;
+  height: 24px;
+  border-radius: 7px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+/* The bar: one piece per step, as wide as its moves */
+.timeline-track {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  background: var(--surface-2);
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* One step's piece: a light tint of its color, filled with the full color as the cube goes through it */
+.seg {
+  --seg-color: var(--border-strong);
+  position: relative;
+  flex-basis: 0;
+  min-width: 0;
+  background: color-mix(in srgb, var(--seg-color) 24%, var(--surface));
+}
+
+/* A thin gap before each piece but the first (a shadow, so the widths stay true to the moves) */
+.seg + .seg {
+  box-shadow: inset 2px 0 0 var(--surface);
+}
+
+/* The fill: how far through the step the cube is */
+.seg i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--fill, 0) * 100%);
+  background: var(--seg-color);
+}
+
+/* Moves after the last finished step: striped, not a step yet */
+.seg.is-unfinished {
+  background: repeating-linear-gradient(-45deg, var(--surface-2) 0 5px, color-mix(in srgb, var(--warn) 22%, var(--surface)) 5px 10px);
+}
+
+/* Your moves before a preview of the engine's: grey */
+.seg.is-base {
+  --seg-color: color-mix(in srgb, var(--text-muted) 60%, var(--surface));
+}
+
+/* The cursor: a line at the position on show */
+.timeline-cursor {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--text);
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px var(--surface);
+  pointer-events: none;
+  transition: left 0.12s ease-out;
+}
+
+/* No moves yet: a hint over the bar, no cursor */
+.timeline-empty {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.timeline.is-empty {
+  cursor: default;
+}
+
+.timeline.is-empty .timeline-empty {
+  display: grid;
+}
+
+.timeline.is-empty .timeline-cursor {
+  display: none;
+}
+
+/* Step names under the bar, each as wide as its piece */
+.timeline-labels {
+  display: flex;
+  min-height: 16px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 550;
+  line-height: 16px;
+}
+
+.timeline-labels span {
+  flex-basis: 0;
+  min-width: 0;
+  padding: 0 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Buttons, readout and position in one row */
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The five player buttons */
+.player-buttons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Readout: the step and how far into it, then the move just made with its fingertrick */
+.now {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.now-step {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.now-step b {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.now-move {
+  min-height: 21px;
+  white-space: nowrap;
+}
+
+.now-move b {
+  font: 700 15px/1.4 var(--font-mono);
+}
+
+.now-move span {
+  margin-left: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Position: moves made of the moves on show */
+.now-count {
+  min-width: 7ch;
+  color: var(--text-muted);
+  font: 600 12px/1 var(--font-mono);
+  text-align: right;
+  white-space: nowrap;
+}
+
+
+/* ========================= */
+/* CUBE CENTERING */
+/* ========================= */
 
 /* Cube centering layer, over the whole cube area */
 .page-center {
@@ -905,7 +1256,9 @@ body {
   width: 200px;
   height: 200px;
 
+  /* Nudged up and right a little, so the cube and its floating faces sit centered together */
   transform:
+    translate(calc(var(--cube-depth) * 0.16), calc(var(--cube-depth) * -0.29))
     rotateX(-25deg)
     rotateY(-35deg);
 }
@@ -933,6 +1286,43 @@ body {
  */
 :root {
   --cube-depth: 48px;
+  --hint-depth: 80px;
+}
+
+/* Floating copies of the hidden faces: only in 3D */
+.grid.hint {
+  display: none;
+}
+
+/* In 3D: bare stickers (no black plastic), seen from behind like through the cube, fading in as it folds up */
+.cube3d .grid.hint {
+  display: grid;
+  background-color: transparent;
+  animation: hint-in 0.6s ease-out;
+}
+
+/* LEFT copy - orange */
+.cube3d #orangeSquareGridHint {
+  transform:
+    translate(-50%, -50%)
+    rotateY(-90deg)
+    translateZ(var(--hint-depth));
+}
+
+/* BACK copy - blue */
+.cube3d #blueSquareGridHint {
+  transform:
+    translate(-50%, -50%)
+    rotateY(180deg)
+    translateZ(var(--hint-depth));
+}
+
+/* BOTTOM copy - yellow */
+.cube3d #yellowSquareGridHint {
+  transform:
+    translate(-50%, -50%)
+    rotateX(-90deg)
+    translateZ(var(--hint-depth));
 }
 
 
@@ -1005,293 +1395,723 @@ body {
 
 
 /* ========================= */
-/* SOLUTION EVALUATION */
+/* TABS */
 /* ========================= */
 
-/* Results panel: a card in its own column on wide screens, scrolling on its own */
-#evaluation {
-  grid-area: eval;
-  min-height: 0;
-  overflow: auto;
-  padding: 0 18px 18px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  font-size: 13px;
-  animation: fade-in 0.2s ease-out;
-}
-
-/* Hidden while there's nothing in it */
-#evaluation:empty {
-  display: none;
-}
-
-/* Narrower screens: a drawer sliding in over the cube from the right */
-@media (max-width: 1359px) {
-  #evaluation {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 40;
-    width: min(680px, 100vw);
-    border-width: 0 0 0 1px;
-    border-radius: 0;
-    box-shadow: var(--shadow-lg);
-    animation: slide-in 0.25s ease-out;
-  }
-}
-
-/* While evaluating: the progress message centered next to a spinner */
-#evaluation.is-loading {
+/* Tab row: the tabs on the left, the fingertricks switch and hand legend on the right */
+.tabs-bar {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 160px;
-  padding: 24px;
-  color: var(--text-muted);
-}
-
-#evaluation.is-loading::before {
-  content: "";
-  flex: none;
-  width: 16px;
-  height: 16px;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-/* Header: title and close button, kept in view while the panel scrolls */
-#evaluation .eval-head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin: 0 -18px 14px;
-  padding: 16px 18px 12px;
-  background: var(--surface);
+  gap: 4px 14px;
   border-bottom: 1px solid var(--border);
 }
 
-/* Title: the method's name, under a small "Evaluation" label */
-#evaluation h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+/* The tabs themselves */
+.tabs {
+  display: flex;
+  gap: 4px;
 }
 
-#evaluation .eyebrow {
-  display: block;
-  margin-bottom: 2px;
+/* One tab: icon and label, underlined when picked */
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: -1px;
+  padding: 10px 12px;
+  background: none;
   color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-/* Close button: a small square with the × */
-#evaluation .close {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: var(--surface);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 20px;
-  line-height: 1;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font: 600 14px/1 var(--font-sans);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: color 0.15s, border-color 0.15s;
 }
 
-#evaluation .close:hover {
-  background: var(--surface-2);
+.tab:hover {
   color: var(--text);
 }
 
-/* A row of summary tiles (rating, pace): as many per row as fit */
-#evaluation .eval-summary {
+.tab[aria-selected="true"] {
+  color: var(--text);
+  border-bottom-color: var(--text);
+}
+
+/* Switch and legend side by side */
+.tabs-tools {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 0;
+}
+
+/* Hand legend: the colors under the move chips */
+.hand-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.hand-legend i {
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.hand-legend i.right {
+  background: var(--hand-right);
+}
+
+.hand-legend i.left {
+  margin-left: 6px;
+  background: var(--hand-left);
+}
+
+/* A tab's panel: its parts stacked */
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+
+/* ========================= */
+/* NOTICES AND BANNERS */
+/* ========================= */
+
+/* A notice in a panel: empty, busy and error states */
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 22px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  text-align: center;
+  animation: fade-in 0.25s ease-out;
+}
+
+.notice h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.notice p {
+  max-width: 60ch;
+  margin: 0;
+}
+
+.notice p:empty {
+  display: none;
+}
+
+/* A failed review's title in red */
+.notice.error h3 {
+  color: var(--error);
+}
+
+/* Numbered how-to steps in the empty review */
+.notice-steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px;
+  max-width: 58ch;
+  margin: 6px 0 0;
+  padding-left: 22px;
+  text-align: left;
+}
+
+/* The notice's buttons */
+.notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Busy notice's spinner */
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid var(--border-strong);
+  border-top-color: var(--text);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* A banner across a panel: a message and its buttons */
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.banner p {
+  margin: 0;
+}
+
+/* Warning banner: an unfinished solution */
+.banner.warn {
+  background: var(--warn-bg);
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+}
+
+/* Info banner: the review is out of date */
+.banner.info {
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+}
+
+/* A banner's buttons */
+.banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+
+/* ========================= */
+/* REVIEW */
+/* ========================= */
+
+/* The whole review, fading in */
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: fade-in 0.25s ease-out;
+}
+
+/* Header: small label, method name, its note */
+.review-head h2 {
+  margin: 2px 0 0;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+/* Small caps-style label over titles */
+.eyebrow {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Dimmed line under a title */
+.muted {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+/* Summary tiles: three in a row */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
-/* One tile: tinted box */
-#evaluation .tile {
-  padding: 10px 12px;
-  background: var(--surface-2);
+/* One tile: label, big value, note */
+.tile {
+  padding: 12px 14px;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 
-/* Tile label: small dimmed caps */
-#evaluation .tile-label {
+.tile-label {
   color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-/* Tile value: big, with even-width digits */
-#evaluation .tile-value {
-  margin: 2px 0 1px;
+.tile-value {
+  margin: 2px 0;
   font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
 }
 
-/* Tile note: small and dimmed */
-#evaluation .tile-note {
+.tile-note {
   color: var(--text-muted);
-  font-size: 11.5px;
-  line-height: 1.4;
+  font-size: 12px;
 }
 
-/* Hint to add a time: a dashed box */
-#evaluation .eval-hint {
-  margin: 0;
-  padding: 9px 12px;
-  color: var(--text-muted);
-  border: 1px dashed var(--border-strong);
-  border-radius: 10px;
-  font-size: 12.5px;
+/* Tile values tinted by how you did */
+.tile-value.better {
+  color: var(--ok);
 }
 
-/* Section titles above the tile rows and tables */
-#evaluation .eval-section {
-  margin: 18px 0 8px;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+.tile-value.warn {
+  color: var(--warn);
 }
 
-/* The first one, right under the header: no gap above */
-#evaluation .eval-head + .eval-section {
-  margin-top: 0;
+.tile-value.worse {
+  color: var(--error);
 }
 
-/* Table box: rounded border, scrolling sideways when the panel is narrower than the table */
-#evaluation .table-wrap {
-  margin-bottom: 16px;
-  overflow-x: auto;
+/* Folded explanations and numbers */
+.explain {
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 
-/* Tables: full width, rows split by lines */
-#evaluation table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-/* The per-step table keeps its columns readable */
-#evaluation .per-step {
-  min-width: 600px;
-}
-
-/* Cells: top-aligned, a line under each row */
-#evaluation th,
-#evaluation td {
-  padding: 9px 11px;
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px solid var(--border);
-}
-
-/* No line under the last row (the box's border closes it) */
-#evaluation tr:last-child > * {
-  border-bottom: 0;
-}
-
-/* Header row: small dimmed caps on a tinted strip */
-#evaluation tr:first-child > th {
-  background: var(--surface-2);
+.explain summary {
+  padding: 10px 14px;
   color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-/* Row titles (step names, "Yours"…) */
-#evaluation tr + tr > th {
-  font-weight: 650;
-  min-width: 90px;
-}
-
-/* Move text and fingertricks: monospace, wrapping */
-#evaluation .moves,
-#evaluation pre {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* Count and speed under the moves: smaller and dimmer */
-#evaluation .score {
-  margin-top: 3px;
-  color: var(--text-muted);
-  font-size: 11.5px;
-}
-
-/* Fingertricks fold: a small link-like toggle */
-#evaluation details {
-  margin-top: 4px;
-}
-
-#evaluation summary {
-  width: fit-content;
-  color: var(--focus);
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 
-/* Opened fingertricks: a tinted block */
-#evaluation details pre {
-  margin-top: 6px;
-  padding: 8px 10px;
-  background: var(--surface-2);
-  border-radius: 7px;
-  font-size: 12px;
+.explain summary:hover {
+  color: var(--text);
 }
 
-/* You vs engine figures: green when yours did better, red when worse */
-#evaluation .delta {
+.explain ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0 16px 12px 32px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* The raw numbers: label on the left, value on the right */
+.numbers {
+  width: calc(100% - 28px);
+  margin: 0 14px 12px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.numbers th {
+  padding: 6px 0;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-align: left;
+}
+
+.numbers td {
+  padding: 6px 0;
   font-family: var(--font-mono);
+  text-align: right;
+}
+
+.numbers tr + tr > * {
+  border-top: 1px solid var(--border);
+}
+
+/* Section titles in the review */
+.section-title {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+/* A section title with a button at its right */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.section-head .section-title {
+  margin: 0;
+}
+
+/* Step cards, one under the other */
+.step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One step's card: a stripe in its step's color on the left */
+.step-card {
+  --step-color: var(--border-strong);
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--step-color);
+  border-radius: var(--radius-sm);
+}
+
+/* Card head: a button that shows the step on the cube */
+.step-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  color: inherit;
+  border: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.step-head:hover {
+  background: var(--surface-2);
+}
+
+/* Step name */
+.step-name {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+/* Later steps the same moves finished */
+.step-also {
+  color: var(--ok);
+  font-size: 12px;
   font-weight: 600;
+}
+
+/* Move count, pushed right, before the verdict */
+.step-count {
+  margin-left: auto;
+  color: var(--text-muted);
+  font: 600 12px/1 var(--font-mono);
+}
+
+/* A note in place of the count: solved with another step, already done, not finished */
+.step-tag {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.step-tag.warn {
+  color: var(--warn);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* Steps with nothing of their own: a slimmer, quieter card */
+.step-card.is-compact .step-head {
+  padding-block: 7px;
+}
+
+.step-card.is-compact .step-name {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* Verdict pill */
+.verdict {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
   white-space: nowrap;
 }
 
-#evaluation .delta.better {
+.verdict.better {
+  background: var(--ok-bg);
   color: var(--ok);
 }
 
-#evaluation .delta.worse {
+.verdict.even {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.verdict.warn {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.verdict.worse {
+  background: var(--error-bg);
   color: var(--error);
 }
 
-#evaluation .delta.even {
+/* Card body: your moves, the engine's, and a note */
+.step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 2px 14px 14px;
+}
+
+/* One line of moves: its head (label, figures, button) over the chips */
+.move-line {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.move-line-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-height: 30px;
+}
+
+/* Line label: You, Engine, or a step's name */
+.move-line-label {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+/* Count and effort */
+.move-line-figs {
   color: var(--text-muted);
+  font: 500 12px/1 var(--font-mono);
+}
+
+/* The line's button at its right end */
+.move-line-head .btn {
+  margin-left: auto;
+}
+
+/* The engine picked your moves */
+.same-line {
+  margin: 0;
+  color: var(--ok);
+  font-size: 12.5px;
+  font-weight: 550;
+}
+
+/* What the verdict counts beyond the step itself */
+.step-note {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+/* Steps a run of engine moves is made of */
+.parts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* The engine's own solve, in its box */
+.engine-solve {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--engine);
+  border-radius: var(--radius-sm);
+}
+
+
+/* ========================= */
+/* MOVE CHIPS */
+/* ========================= */
+
+/* Moves as chips that wrap */
+.moves-view {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* One move: the move over its fingertrick, a line in its hand's color under it */
+.mv {
+  --hand: var(--border-strong);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 38px;
+  padding: 3px 6px 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-bottom: 3px solid var(--hand);
+  border-radius: 7px;
+  line-height: 1.25;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+/* Hands: right and left */
+.mv.right {
+  --hand: var(--hand-right);
+}
+
+.mv.left {
+  --hand: var(--hand-left);
+}
+
+/* The move itself */
+.mv b {
+  font: 700 13.5px/1.35 var(--font-mono);
+}
+
+/* Its fingertrick */
+.mv small {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+/* A move no trick makes: its note in red */
+.mv.no-trick small {
+  color: var(--error);
+}
+
+/* Moves of your solution: clickable, to see the cube after them */
+.mv.is-clickable {
+  cursor: pointer;
+}
+
+.mv.is-clickable:hover {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  border-bottom-color: var(--hand);
+}
+
+/* The move the cube is on */
+.mv.is-current {
+  background: color-mix(in srgb, var(--focus) 14%, var(--surface));
+  border-color: var(--focus);
+  border-bottom-color: var(--hand);
+}
+
+/* A regrip between moves: a dashed marker */
+.regrip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 5px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 7px;
+  color: var(--text-muted);
+  line-height: 1.25;
+}
+
+.regrip b {
+  font-size: 12px;
+}
+
+.regrip small {
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+/* No moves to show */
+.moves-empty {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* Fingertricks switched off: just the moves */
+.hide-tricks .mv small,
+.hide-tricks .regrip {
+  display: none;
+}
+
+.hide-tricks .mv {
+  min-width: 0;
+}
+
+
+/* ========================= */
+/* STEP SOLVER */
+/* ========================= */
+
+/* Intro line */
+.solver-card .lead {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Where it starts, and what's done there */
+.solver-from {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  font-size: 13.5px;
+}
+
+.solver-from-label,
+.solver-done {
+  color: var(--text-muted);
+}
+
+/* Step picker and its button */
+.solver-row {
+  display: flex;
+  gap: 8px;
+}
+
+.solver-row .select-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The answer: a card with the engine's stripe */
+.result-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--engine);
+  border-radius: var(--radius-sm);
+  animation: fade-in 0.25s ease-out;
+}
+
+/* Answer head: what it solved, and its figures */
+.result-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px 10px;
+}
+
+.result-head h3 {
+  margin: 2px 0 0;
+  font-size: 17px;
+}
+
+/* The answer's buttons */
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 
@@ -1299,35 +2119,71 @@ body {
 /* SMALL SCREENS */
 /* ========================= */
 
-/* Phones and narrow windows: cube on top, controls under it, the page scrolling as a whole */
-@media (max-width: 760px) {
-  .topbar {
-    gap: 12px;
-    padding: 0 16px;
-    justify-content: space-between;
-  }
-
-  .workspace {
+/* Narrower windows: one column, the cube on top (no longer sticky), then your solve and its review */
+@media (max-width: 900px) {
+  .app,
+  .app.cube-right {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "stage"
-      "panel";
-    height: auto;
-    padding: 12px 16px 24px;
   }
 
-  .panel {
-    overflow: visible;
+  /* The cube stays on top, whichever side was picked, and the side picker goes */
+  .viewer,
+  .app.cube-right .viewer {
+    position: relative;
+    top: 0;
+    order: 0;
   }
 
-  #cube-wrapper {
-    min-height: 300px;
+  .side-picker {
+    display: none;
   }
 
-  .stage-bar {
-    top: 10px;
-    left: 10px;
-    right: 10px;
+  .stage {
+    height: 340px;
+  }
+}
+
+/* Phones: tighter margins, a shorter stage, tiles stacked */
+@media (max-width: 640px) {
+  .topbar {
+    gap: 10px;
+    padding: 0 16px;
+  }
+
+  .app {
+    padding: 0 16px 32px;
+  }
+
+  .stage {
+    height: 290px;
+  }
+
+  .tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fields {
+    grid-template-columns: minmax(0, 1fr) 110px;
+  }
+
+  .hand-legend {
+    display: none;
+  }
+}
+
+/* Very narrow: no tagline, the player's readout under its buttons */
+@media (max-width: 420px) {
+  .tagline {
+    display: none;
+  }
+
+  .player-row {
+    flex-wrap: wrap;
+  }
+
+  .now {
+    order: 3;
+    flex-basis: 100%;
   }
 }
 
@@ -1358,7 +2214,7 @@ body {
   }
 }
 
-/* Evaluation column fading in */
+/* Panels fading in */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -1366,10 +2222,9 @@ body {
   }
 }
 
-/* Evaluation drawer sliding in */
-@keyframes slide-in {
+/* Floating 3D faces fading in */
+@keyframes hint-in {
   from {
-    transform: translateX(40px);
     opacity: 0;
   }
 }

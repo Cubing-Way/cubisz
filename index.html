@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>cubisz</title>
+  <title>cubisz · solve review</title>
   <!-- Tab icon: the same four stickers as the logo -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='2' y='2' width='9' height='9' rx='2.5' fill='%23e5483b'/><rect x='13' y='2' width='9' height='9' rx='2.5' fill='%232f9e5b'/><rect x='2' y='13' width='9' height='9' rx='2.5' fill='%232f6fd6'/><rect x='13' y='13' width='9' height='9' rx='2.5' fill='%23f2b92e'/></svg>">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- Top bar: name and puzzle picker -->
+  <!-- Top bar: name, what the app does, and the puzzle picker -->
   <header class="topbar">
     <a class="brand" href="./">
       <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
@@ -22,11 +22,21 @@
       </svg>
       <span>cubisz</span>
     </a>
+    <span class="tagline">Solve review</span>
 
-    <!-- Puzzle picker: these buttons set the hidden select below -->
-    <div class="segmented" role="radiogroup" aria-label="Puzzle">
-      <label><input type="radio" name="puzzle" value="2x2Opt" autocomplete="off"><span>2×2</span></label>
-      <label><input type="radio" name="puzzle" value="3x3Opt" autocomplete="off" checked><span>3×3</span></label>
+    <!-- Right end of the bar: which side the cube sits on, and the puzzle -->
+    <div class="topbar-end">
+      <!-- Cube side: the cube's column on the left or the right (wide windows only; main.js remembers it) -->
+      <div class="segmented side-picker" role="radiogroup" aria-label="Cube side" title="Which side of the page the cube sits on">
+        <label><input type="radio" name="side" value="left" autocomplete="off" checked><span>Cube left</span></label>
+        <label><input type="radio" name="side" value="right" autocomplete="off"><span>Cube right</span></label>
+      </div>
+
+      <!-- Puzzle picker: these buttons set the hidden select below -->
+      <div class="segmented" role="radiogroup" aria-label="Puzzle">
+        <label><input type="radio" name="puzzle" value="2x2Opt" autocomplete="off"><span>2×2</span></label>
+        <label><input type="radio" name="puzzle" value="3x3Opt" autocomplete="off" checked><span>3×3</span></label>
+      </div>
     </div>
 
     <!-- The puzzle select renderer.js and main.js read: hidden, driven by the buttons above -->
@@ -36,99 +46,191 @@
     </select>
   </header>
 
-  <main class="workspace">
+  <main class="app">
 
-    <!-- Controls: scramble, solution and solver -->
-    <aside class="panel">
-
-      <!-- Scramble: random or typed, and FMC mode -->
-      <section class="card">
-        <div class="card-head">
-          <h2>Scramble</h2>
-          <button id="scramble-btn" class="btn btn-ghost btn-sm" type="button">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
-            New
-          </button>
+    <!-- Left: the cube and its player, staying in view while the right side scrolls -->
+    <section class="viewer" aria-label="Cube">
+      <div class="stage">
+        <!-- Stage top row: view picker on the left, solved badge on the right -->
+        <div class="stage-bar">
+          <div class="segmented segmented-sm" role="radiogroup" aria-label="View">
+            <label><input type="radio" name="view" value="2d" autocomplete="off"><span>2D</span></label>
+            <label><input type="radio" name="view" value="3d" autocomplete="off" checked><span>3D</span></label>
+          </div>
+          <span id="solved-badge" class="badge" hidden>
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            Solved
+          </span>
         </div>
-        <textarea id="custom-scramble" class="moves-input" rows="2" placeholder="Type or paste a scramble" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Scramble"></textarea>
-
-        <!-- FMC mode switch -->
-        <label class="switch">
-          <input type="checkbox" id="fmc-toggle" autocomplete="off">
-          <span class="switch-track" aria-hidden="true"></span>
-          <span class="switch-text">FMC mode <small>ignores slice moves</small></span>
-        </label>
-      </section>
-
-      <!-- Solution: typed or from the solver, then evaluated -->
-      <section class="card">
-        <div class="card-head">
-          <h2>Solution</h2>
-          <span id="move-count" class="chip" hidden></span>
+        <div id="cube-wrapper">
+          <div id="cube-net"></div>
         </div>
-        <textarea id="custom-solve" class="moves-input" rows="2" placeholder="Type a solution to play it on the cube" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Solution"></textarea>
+        <!-- Preview banner: shown while the cube plays the engine's moves instead of yours -->
+        <div id="preview-banner" class="preview-banner" hidden>
+          <span class="preview-dot" aria-hidden="true"></span>
+          <span>Showing <b id="preview-label"></b></span>
+          <button id="preview-back" class="btn btn-sm" type="button">Back to my solve</button>
+        </div>
+      </div>
+
+      <!-- Player: the step timeline, the buttons, and what the cube is on -->
+      <div class="player">
+        <!-- Timeline: one piece per step, drag to scrub (arrow keys step a move) -->
+        <div id="timeline" class="timeline" role="slider" tabindex="0" aria-label="Solution position" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+          <div id="timeline-track" class="timeline-track"></div>
+          <div id="timeline-cursor" class="timeline-cursor" aria-hidden="true"></div>
+          <span class="timeline-empty">Your solution's steps show here</span>
+        </div>
+        <div id="timeline-labels" class="timeline-labels" aria-hidden="true"></div>
+
+        <!-- Buttons on the left, the move just made with its fingertrick in the middle, the position on the right -->
+        <div class="player-row">
+          <div class="player-buttons">
+            <button id="start-btn" class="btn btn-ghost btn-icon" type="button" title="Start (Home)" aria-label="Go to the start">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M18 6l-8 6 8 6z"/></svg>
+            </button>
+            <button id="prev-btn" class="btn btn-ghost btn-icon" type="button" title="Move back (←, Shift+← for a step)" aria-label="Move back">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+            </button>
+            <button id="play-btn" class="btn btn-primary btn-icon btn-play" type="button" title="Play (Space)" aria-label="Play" disabled>
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path id="play-icon" d="M7 4.5v15l12-7.5z"/></svg>
+            </button>
+            <button id="next-btn" class="btn btn-ghost btn-icon" type="button" title="Move on (→, Shift+→ for a step)" aria-label="Move on">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+            </button>
+            <button id="end-btn" class="btn btn-ghost btn-icon" type="button" title="End (End)" aria-label="Go to the end">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M6 6l8 6-8 6z"/></svg>
+            </button>
+          </div>
+          <div class="now" aria-live="polite">
+            <span class="now-step"><b id="now-step"></b> <span id="now-step-pos"></span></span>
+            <span class="now-move"><b id="now-move"></b> <span id="now-finger"></span></span>
+          </div>
+          <span id="now-count" class="now-count">0 / 0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: your solve's inputs, then the review and the step solver -->
+    <section class="work">
+
+      <!-- Your solve: scramble, solution, time and method -->
+      <section class="card solve-card" aria-label="Your solve">
+        <!-- Scramble: random or typed, and FMC mode -->
+        <div class="field">
+          <div class="field-head">
+            <label for="custom-scramble"><span class="num">1</span>Scramble</label>
+            <div class="field-tools">
+              <label class="switch" title="FMC mode: the cube ignores slice moves (M, E, S)">
+                <input type="checkbox" id="fmc-toggle" autocomplete="off">
+                <span class="switch-track" aria-hidden="true"></span>
+                <span class="switch-text">FMC</span>
+              </label>
+              <button id="scramble-btn" class="btn btn-ghost btn-sm" type="button" title="A new random scramble (clears your solution)">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+                New
+              </button>
+            </div>
+          </div>
+          <textarea id="custom-scramble" class="moves-input" rows="1" placeholder="Paste your scramble, or press New" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+        </div>
+
+        <!-- Your solution: typed or pasted, comments allowed -->
+        <div class="field">
+          <div class="field-head">
+            <label for="custom-solve"><span class="num">2</span>Your solution</label>
+            <span id="solve-info" class="field-note"></span>
+          </div>
+          <textarea id="custom-solve" class="moves-input" rows="3" placeholder="Type or paste how you solved it, e.g. y' R U R' … (// comments and line breaks are fine)" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+          <!-- Shown when the solution only solves with S and S' the other way round (how cubisz's cube used to turn them) -->
+          <div id="slice-hint" class="banner info slice-hint" hidden>
+            <p>This solves the cube with <b>S</b> and <b>S'</b> swapped. S turns like F, as on other cube sites (cubisz used to turn it the other way).</p>
+            <button id="slice-fix" class="btn btn-sm btn-primary" type="button">Swap S ↔ S'</button>
+          </div>
+        </div>
 
         <!-- Method and solve time, side by side -->
         <div class="fields">
-          <!-- Method picker: the method Solve and Evaluate use -->
+          <!-- Method picker: the method the review and the step solver use -->
           <div class="field">
-            <label for="select-method">Method <small id="method-slow" class="warn" hidden>⚠ slow</small></label>
+            <label for="select-method" class="field-label">Method <small id="method-slow" class="warn" hidden>⚠ slow</small></label>
             <div class="select-btn">
-              <!-- Options: one per method in method.js's list, filled in by main.js -->
+              <!-- Options: one per method in method.js's list, grouped, filled in by main.js -->
               <select id="select-method" autocomplete="off"></select>
             </div>
           </div>
 
-          <!-- Solve time (optional): for TPS and the execution score in the evaluation -->
+          <!-- Solve time (optional): turns effort into seconds in the review -->
           <div class="field">
-            <label for="solve-time">Time <small>optional</small></label>
+            <label for="solve-time" class="field-label">Time <small>optional</small></label>
             <div class="time-input">
               <input type="text" id="solve-time" inputmode="decimal" placeholder="12.34" autocomplete="off" spellcheck="false">
               <span aria-hidden="true">s</span>
             </div>
           </div>
         </div>
+        <p id="method-note" class="method-note"></p>
 
-        <!-- Solver buttons -->
-        <div class="actions">
-          <button id="solve-btn" class="btn btn-primary" type="button">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>
-            Solve
-          </button>
-          <button id="cross-btn" class="btn" type="button">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>
-            Cross
-          </button>
-          <button id="eval-btn" class="btn btn-wide" type="button">
+        <!-- The main action, and the engine's state -->
+        <div class="solve-actions">
+          <button id="review-btn" class="btn btn-primary btn-lg" type="button">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M7 16v-5M12 16V5M17 16v-8"/></svg>
-            Evaluate solution
+            <span><span class="num num-inline">3</span>Review my solve</span>
+          </button>
+          <p id="status" class="status" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <!-- Tabs: the review of your solve, and the step solver; the fingertricks switch applies to both -->
+      <div class="tabs-bar">
+        <div class="tabs" role="tablist" aria-label="Tools">
+          <button id="tab-review" class="tab" type="button" role="tab" aria-selected="true" aria-controls="review-panel">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M7 16v-5M12 16V5M17 16v-8"/></svg>
+            Review
+          </button>
+          <button id="tab-solver" class="tab" type="button" role="tab" aria-selected="false" aria-controls="solver-panel">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+            Step solver
           </button>
         </div>
-
-        <!-- Solver status: engine loading, solving, results and errors -->
-        <p id="status" class="status" role="status" aria-live="polite"></p>
-      </section>
-    </aside>
-
-    <!-- Stage: the cube, with its view toggle and solved badge -->
-    <section class="stage" aria-label="Cube">
-      <div class="stage-bar">
-        <div class="segmented segmented-sm" role="radiogroup" aria-label="View">
-          <label><input type="radio" name="view" value="2d" autocomplete="off" checked><span>2D</span></label>
-          <label><input type="radio" name="view" value="3d" autocomplete="off"><span>3D</span></label>
+        <!-- Fingertricks switch, and what the colors under the moves mean -->
+        <div class="tabs-tools">
+          <span class="hand-legend" aria-hidden="true"><i class="right"></i>right hand<i class="left"></i>left hand</span>
+          <label class="switch" title="Show the suggested fingertrick under every move">
+            <input type="checkbox" id="tricks-toggle" autocomplete="off" checked>
+            <span class="switch-track" aria-hidden="true"></span>
+            <span class="switch-text">Fingertricks</span>
+          </label>
         </div>
-        <span id="solved-badge" class="badge" hidden>
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-          Solved
-        </span>
       </div>
-      <div id="cube-wrapper">
-        <div id="cube-net"></div>
-      </div>
-    </section>
 
-    <!-- Evaluation results: hidden while empty (no whitespace inside, so :empty matches) -->
-    <aside id="evaluation" aria-label="Evaluation"></aside>
+      <!-- Review panel: filled by review.js -->
+      <section id="review-panel" class="tab-panel" role="tabpanel" aria-labelledby="tab-review"></section>
+
+      <!-- Step solver: one step (or the rest) of the method, from the cube as shown on the left -->
+      <section id="solver-panel" class="tab-panel" role="tabpanel" aria-labelledby="tab-solver" hidden>
+        <div class="card solver-card">
+          <p class="lead">Ask the engine for one step, from the cube as shown on the left. Move along the timeline to start from any point of your solution.</p>
+          <div class="solver-from">
+            <span class="solver-from-label">Starting from</span>
+            <b id="solver-from"></b>
+            <span id="solver-done" class="solver-done"></span>
+          </div>
+          <div class="solver-row">
+            <div class="select-btn">
+              <!-- Options: the method's steps (done ones marked) and every step left, filled in by main.js -->
+              <select id="solver-step" autocomplete="off" aria-label="Step to solve"></select>
+            </div>
+            <button id="solver-btn" class="btn btn-primary" type="button">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>
+              Find moves
+            </button>
+          </div>
+          <p id="solver-status" class="status" role="status" aria-live="polite"></p>
+        </div>
+        <div id="solver-result"></div>
+      </section>
+    </section>
   </main>
 
   <script type="module" src="main.js"></script>

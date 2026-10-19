@@ -82,8 +82,9 @@ function printScrambleMoves(scr, shouldReset = true) {
     "E": E,
     "E'": () => { E(); E(); E(); },
     "E2": () => { E(); E(); },
-    "S": S,
-    "S'": () => { S(); S(); S(); },
+    // The model's S turns like B, so standard S (turning like F, as puzzly and other cube sites read it) is its S three times
+    "S": () => { S(); S(); S(); },
+    "S'": S,
     "S2": () => { S(); S(); },
     "Rw": () => { R(); M(); M(); M(); },
     "Rw'": () => { R(); R(); R(); M(); },

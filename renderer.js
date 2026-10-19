@@ -185,6 +185,15 @@ function createFace(face, selectedPuzzle) {
 
   if (!grid) return null;
 
+  // The face's floating copy for the 3D view gets the same stickers (only the hidden faces have one)
+  const hint = document.getElementById(`${faceGridIds[face]}Hint`);
+  if (hint) fillFace(hint, selectedPuzzle);
+
+  return fillFace(grid, selectedPuzzle);
+}
+
+// Builds a face's stickers in a grid: rounded SVG squares, 2x2 or 3x3
+function fillFace(grid, selectedPuzzle) {
   grid.innerHTML = "";
 
   const size = getPuzzleSize();
@@ -247,16 +256,19 @@ function paintCube() {
   const stickerCount = size * size;
 
   for (const face of Object.keys(faceGridIds)) {
-    const squares = document.querySelectorAll(
-      `#${faceGridIds[face]} .square`
-    );
+    // The face's stickers, then its floating copy's (if it has one) in the same order
+    const squares = [
+      ...document.querySelectorAll(`#${faceGridIds[face]} .square`),
+      ...document.querySelectorAll(`#${faceGridIds[face]}Hint .square`)
+    ];
 
     const stickers = cube[face];
 
     if (!stickers) continue;
 
-    for (let i = 0; i < stickerCount; i++) {
-      const color = colorMap[stickers[i]];
+    // Copy stickers wrap round to the face's colors
+    for (let i = 0; i < squares.length; i++) {
+      const color = colorMap[stickers[i % stickerCount]];
 
       if (!squares[i]) continue;
 
@@ -329,6 +341,12 @@ function resize(size) {
     `${depth}px`
   );
 
+  // Floating hidden faces in 3D: 0.95 of a cubie out from the cube, where cubing.js's twisty player floats its hint stickers
+  document.documentElement.style.setProperty(
+    "--hint-depth",
+    `${depth + (faceSize / puzzleSize) * 0.95}px`
+  );
+
 document.querySelectorAll(".grid").forEach((grid) => {
   grid.style.gridTemplateColumns =
     `repeat(${puzzleSize}, ${size}px)`;
@@ -371,6 +389,13 @@ async function mountRenderer(container) {
           <div id="blueSquareGrid" class="grid"></div>
 
           <div id="yellowSquareGrid" class="grid"></div>
+
+          <!-- Floating copies of the faces the 3D view hides: left, back and bottom -->
+          <div id="orangeSquareGridHint" class="grid hint"></div>
+
+          <div id="blueSquareGridHint" class="grid hint"></div>
+
+          <div id="yellowSquareGridHint" class="grid hint"></div>
 
         </div>
       </div>
