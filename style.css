@@ -427,26 +427,91 @@ body {
   font-size: 12px;
 }
 
-/* Method row: label on the left, picker on the right */
-.method-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+/* Method and time fields: two columns */
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
-/* Method label: like the card titles, a size up */
-.method-row > label {
-  font-size: 13px;
+/* One field: its label over its control */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Field labels, with an optional dimmed note */
+.field > label {
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text-muted);
+}
+
+.field > label small {
+  margin-left: 3px;
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+/* Slow-method warning beside the Method label: amber, like the busy status */
+.field > label small.warn {
+  color: var(--busy);
+  font-weight: 600;
+  opacity: 1;
+}
+
+/* Time box: a monospace input with an "s" after the number */
+.time-input {
+  position: relative;
+}
+
+.time-input input {
+  width: 100%;
+  height: 36px;
+  padding: 0 26px 0 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: 600 13.5px/1 var(--font-mono);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.time-input span {
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  pointer-events: none;
+}
+
+/* Time box placeholder: dimmed */
+.time-input input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+/* Time box focused: accent ring, like the move boxes */
+.time-input input:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 22%, transparent);
+}
+
+/* Time box with text it can't read: red border */
+.time-input input[aria-invalid="true"] {
+  border-color: var(--error);
 }
 
 /* Method picker: a select dressed as a button, with a chevron */
 .select-btn {
   position: relative;
-  flex: 1;
-  max-width: 200px;
 }
 
 .select-btn::after {
@@ -1054,6 +1119,71 @@ body {
 #evaluation .close:hover {
   background: var(--surface-2);
   color: var(--text);
+}
+
+/* A row of summary tiles (rating, pace): as many per row as fit */
+#evaluation .eval-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+/* One tile: tinted box */
+#evaluation .tile {
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+/* Tile label: small dimmed caps */
+#evaluation .tile-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Tile value: big, with even-width digits */
+#evaluation .tile-value {
+  margin: 2px 0 1px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tile note: small and dimmed */
+#evaluation .tile-note {
+  color: var(--text-muted);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+/* Hint to add a time: a dashed box */
+#evaluation .eval-hint {
+  margin: 0;
+  padding: 9px 12px;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+
+/* Section titles above the tile rows and tables */
+#evaluation .eval-section {
+  margin: 18px 0 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+/* The first one, right under the header: no gap above */
+#evaluation .eval-head + .eval-section {
+  margin-top: 0;
 }
 
 /* Table box: rounded border, scrolling sideways when the panel is narrower than the table */

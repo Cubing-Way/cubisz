@@ -68,13 +68,24 @@
         </div>
         <textarea id="custom-solve" class="moves-input" rows="2" placeholder="Type a solution to play it on the cube" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Solution"></textarea>
 
-        <!-- Method picker: the method Solve and Evaluate use -->
-        <div class="method-row">
-          <label for="select-method">Method</label>
-          <div class="select-btn">
-            <select id="select-method" autocomplete="off">
-              <option value="cfop" selected>CFOP</option>
-            </select>
+        <!-- Method and solve time, side by side -->
+        <div class="fields">
+          <!-- Method picker: the method Solve and Evaluate use -->
+          <div class="field">
+            <label for="select-method">Method <small id="method-slow" class="warn" hidden>⚠ slow</small></label>
+            <div class="select-btn">
+              <!-- Options: one per method in method.js's list, filled in by main.js -->
+              <select id="select-method" autocomplete="off"></select>
+            </div>
+          </div>
+
+          <!-- Solve time (optional): for TPS and the execution score in the evaluation -->
+          <div class="field">
+            <label for="solve-time">Time <small>optional</small></label>
+            <div class="time-input">
+              <input type="text" id="solve-time" inputmode="decimal" placeholder="12.34" autocomplete="off" spellcheck="false">
+              <span aria-hidden="true">s</span>
+            </div>
           </div>
         </div>
 
