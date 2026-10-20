@@ -500,19 +500,84 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
     onProgress(runs, runs, "the end of yours", runProgress(scramble, method, plain.join(" ")));
     fromYourEnd = methodFigures(await pending, false);
   }
+  // The engine's whole method solution from the scramble (the first run starts there)
+  const engine = steps[0].fromHere;
   return {
     method: method.name,
+    // The method's steps, for splitting engine lines into them (see engineLine)
+    methodSteps: method.steps,
     scramble,
     moves,
     ends,
     complete: ends.length === method.steps.length,
     stopsIn: method.steps[ends.length]?.name ?? null,
     yours,
-    // The engine's whole method solution from the scramble (the first run starts there)
-    engine: steps[0].fromHere,
+    engine,
     fromYourEnd,
     steps,
   };
+}
+
+// ============ ENGINE LINES ============
+// Engine lines made so far, per review (step index → line)
+const madeLines = new WeakMap();
+
+// The engine's line to follow in a review: its own solve from the scramble (index 0), or a branch off your solution at the start of your step `index`
+// (your moves up to there, then the engine's run from your cube). Split into the method's steps by the same goals as yours, so the two line up step
+// by step; parts made of your moves alone (before the branch) are marked shared. Made once per review and step
+export function engineLine(evaluation, index = 0) {
+  let made = madeLines.get(evaluation);
+  if (!made) {
+    made = new Map();
+    madeLines.set(evaluation, made);
+  }
+  if (made.has(index)) return made.get(index);
+  const step = evaluation.steps[index];
+  // Your moves before the branch, then the engine's run from there
+  const base = evaluation.moves.slice(0, step.start);
+  const moves = [...base, ...words(step.fromHere.text)];
+  // Fingertricks: yours for the shared moves, then the run's (none when they don't line up with the moves)
+  const fingers = [...(evaluation.yours.fingering?.steps.slice(0, base.length) ?? []), ...(step.fromHere.fingering?.steps ?? [])];
+  const fingering = fingers.length === moves.length ? { steps: fingers } : null;
+  // The step your moves finished last before the branch, for its name
+  const after = [...evaluation.steps.slice(0, index)].reverse().find((one) => one.end > one.start)?.name ?? null;
+  const line = {
+    index,
+    label: after ? `Engine after your ${after}` : "Engine's own solve",
+    after,
+    shared: base.length,
+    moves,
+    fingering,
+    parts: splitLine(evaluation.scramble, moves, fingering, evaluation.methodSteps, base.length),
+  };
+  made.set(index, line);
+  return line;
+}
+
+// A line of moves split into the method's steps by the same goals your solution is split by: each step's moves (where they start and end among the
+// line's moves), count, effort and fingertricks, and whether they're all before `shared` (your moves, before a branch); a step its moves finished
+// along with the one before has no moves and names that step in solvedWith
+function splitLine(scramble, moves, fingering, steps, shared = 0) {
+  const ends = stepEnds(scramble, moves.map(plainMove), steps);
+  let from = 0;
+  let last = null;
+  return steps.map((step, index) => {
+    // A step the line never finishes (the engine always should) takes the rest of its moves
+    const end = ends[index] ?? moves.length;
+    const text = moves.slice(from, end).join(" ");
+    const part = {
+      name: step.name,
+      index,
+      start: from,
+      end,
+      shared: end <= shared,
+      figures: { ...restFigures(text, moves.slice(0, from).join(" ")), fingering: sliceFingering(fingering, from, end, text, from === 0) },
+      solvedWith: end === from ? last : null,
+    };
+    if (end > from) last = step.name;
+    from = end;
+    return part;
+  });
 }
 
 // Sum of a list of numbers (0 when it's empty)
