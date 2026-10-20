@@ -1,0 +1,1 @@
+import{a as e,r as t}from"./cubing-DcmIuJIp.js";t.expose&&e(()=>import(`./cubing-DcmIuJIp.js`).then(e=>e.t).then(()=>{globalThis.postMessage?globalThis.postMessage(`comlink-exposed`):globalThis.process.getBuiltinModule(`node:worker_threads`).parentPort?.postMessage(`comlink-exposed`)}),[],import.meta.url);var n=import.meta.url;export{n as WORKER_ENTRY_FILE_URL};
