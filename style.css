@@ -1919,16 +1919,338 @@ body {
   gap: 10px;
 }
 
-/* The engine's own solve, in its box */
-.engine-solve {
+/* Steps head: the "Step by step" title on the left, the Follow switch on the right, wrapping on narrow panels */
+.follow-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.follow-head .section-title {
+  margin: 0;
+}
+
+/* "Follow" and its switch */
+.follow-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.follow-label {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+/* What the way of following does, under the head */
+.follow-note {
+  margin: -6px 0 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+/* A slim card's row: its head, and its branch button at the right */
+.card-row {
+  display: flex;
+  align-items: center;
+}
+
+.card-row .step-head {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-row > .btn {
+  margin-right: 10px;
+}
+
+/* A full card's last row: the race standing, and its branch button at the right */
+.card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-foot .race-standing {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Steps still made of your moves, before a branch: greyed, a grey stripe */
+.step-card.is-shared {
+  border-left-color: color-mix(in srgb, var(--text-muted) 55%, var(--surface));
+  background: var(--surface-2);
+}
+
+/* The divider where the engine's line leaves your moves: the fork icon, what it branched after, and the way back */
+.branch-marker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--engine) 12%, var(--surface));
+  border: 1px dashed color-mix(in srgb, var(--engine) 55%, var(--border));
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+}
+
+.branch-marker p {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+}
+
+/* The fork icon in the engine's color */
+.branch-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  background: var(--engine);
+  border-radius: 50%;
+  color: #fff;
+}
+
+.branch-icon .icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* What one way of following shows: its parts stacked */
+.follow-part {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+}
+
+/* A step's numbers, folded away at the bottom of its card */
+.step-more {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.step-more summary {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.step-more summary:hover {
+  color: var(--text);
+}
+
+/* The numbers table inside a card: no side margins */
+.step-more .numbers {
+  width: 100%;
+  margin: 6px 0 4px;
+}
+
+/* The numbers' button row */
+.step-more-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* A line saying why a side has no moves for a step (solved with another, already done) */
+.quiet-line {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-style: italic;
+}
+
+/* Where the race stands after a step */
+.race-standing {
+  margin: 0;
+  padding: 7px 10px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+
+/* ========================= */
+/* STATS */
+/* ========================= */
+
+/* The review's statistics: a compact grid, four across */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  gap: 1px;
+}
+
+/* One stat: label, value, note */
+.stat {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 8px 12px;
+  background: var(--surface);
+  cursor: help;
+}
+
+.stat-label {
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.stat-value {
+  font: 700 15px/1.4 var(--font-mono);
+}
+
+.stat-note {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* ========================= */
+/* RACE */
+/* ========================= */
+
+/* The race against the engine's own solve, in its box */
+.race {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   padding: 14px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 4px solid var(--engine);
   border-radius: var(--radius-sm);
+}
+
+/* Its head wraps on narrow panels */
+.race .section-head {
+  flex-wrap: wrap;
+}
+
+/* Metric picker and play button */
+.race-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The two bars, one under the other */
+.race-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* One bar's row: who, the bar, its total */
+.race-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 76px;
+  align-items: center;
+  gap: 10px;
+}
+
+.race-label {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.race-total {
+  color: var(--text-muted);
+  font: 600 12px/1 var(--font-mono);
+  text-align: right;
+}
+
+/* The track the bar grows in, and the bar: pieces per step */
+.race-track {
+  min-width: 0;
+}
+
+.race-bar {
+  display: flex;
+  height: 26px;
+  overflow: hidden;
+  border-radius: 6px;
+  transition: width 0.3s ease-out;
+}
+
+/* One step's piece: its color, its name inside when it fits */
+.race-seg {
+  --seg-color: var(--border-strong);
+  flex-basis: 0;
+  min-width: 0;
+  padding: 0 6px;
+  background: var(--seg-color);
+  color: #fff;
+  border: none;
+  font: 600 11px/26px var(--font-sans);
+  text-align: left;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.3);
+  cursor: pointer;
+}
+
+/* A thin gap before each piece but the first */
+.race-seg + .race-seg {
+  box-shadow: inset 2px 0 0 var(--surface);
+}
+
+.race-seg span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.race-seg:hover {
+  filter: brightness(1.1);
+}
+
+.race-seg:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+/* Your moves in the step you stopped in: striped */
+.race-seg.is-partial {
+  background: repeating-linear-gradient(-45deg, var(--seg-color) 0 5px, color-mix(in srgb, var(--seg-color) 55%, var(--surface)) 5px 10px);
+}
+
+/* The fork mark on the engine's bar where a branch leaves your moves */
+.race-fork {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 4px;
+  margin: 0 -2px;
+  background: var(--engine);
+  box-shadow: 0 0 0 1px var(--surface);
+}
+
+/* Your moves at the start of a branch of the engine's line: grey, they're the same on both bars */
+.race-seg.is-shared {
+  --seg-color: color-mix(in srgb, var(--text-muted) 55%, var(--surface));
+}
+
+/* What the race shows */
+.race-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 
@@ -2160,6 +2482,15 @@ body {
 
   .tiles {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .race-row {
+    grid-template-columns: 44px minmax(0, 1fr) 64px;
+    gap: 8px;
   }
 
   .fields {

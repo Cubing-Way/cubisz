@@ -7,7 +7,7 @@ import { engineReady, randomScramble, fingering } from "./puzzly.js";
 // Every method, the one the picker starts on, and which ones search (slow)
 import { METHODS, METHOD, keepingFor } from "./method.js";
 // The review and step solver engine: reviews, live step splits, single steps, and their live progress
-import { evaluateSolution, prefetchRun, progressText, progressSummary, reviewable, splitSolution, stepsDoneAt, solveFrom, solveProgress, words, plural } from "./evaluate.js";
+import { evaluateSolution, prefetchRun, progressText, progressSummary, reviewable, splitSolution, stepsDoneAt, solveFrom, solveProgress, words, plural, engineLine } from "./evaluate.js";
 // Drawing reviews, the step solver's answers, notices and move chips
 import { renderReview, renderSolverResult, renderNotice, highlightMoves, stepColor, methodName, methodNote } from "./review.js";
 // The cube player under the cube
@@ -261,11 +261,11 @@ const player = createPlayer(
   { onChange: playerMoved },
 );
 
-// After the player moves: the review's chip of the move just made lit up (none during a preview), and the step solver's start updated
+// After the player moves: the review's chip of the move just made lit up (yours, or the engine's while its own solve is on the cube), and the step solver's start updated
 // (once the moves stop coming, so dragging the timeline stays smooth)
 let solverTimer = null;
 function playerMoved() {
-  highlightMoves(panels.review, player.inPreview ? -1 : player.position);
+  highlightReview();
   clearTimeout(solverTimer);
   solverTimer = setTimeout(updateSolver, 40);
 }
@@ -499,19 +499,109 @@ const reviewActions = {
   },
   // The engine's pick for a step, from your moves before it
   showEngine: (start, text, label) => showEngineMoves(shown.evaluation.moves.slice(0, start), text, label),
-  // The engine's whole solve, from the scramble
-  showFromStart: (text, label) => showEngineMoves([], text, label),
+  // The engine's line on the cube after this many of its moves
+  engineJump: (pos) => showEngineSolve({ from: pos, autoplay: false }),
+  // The engine's line on the cube at the start of one of its steps
+  engineStep: (index) => showEngineSolve({ from: currentLine().parts[index].start, autoplay: false }),
+  // Plays one step of the engine's line
+  playEngineStep: (index) => {
+    const part = currentLine().parts[index];
+    showEngineSolve({ from: part.start, to: part.end });
+  },
+  // Plays the engine's line: its whole solve, or a branch from where it leaves your moves
+  playEngine: () => showEngineSolve({ from: currentLine().shared }),
   // The engine's way to finish from your last move
   showFromEnd: (text) => showEngineMoves(shown.evaluation.moves, text, "Engine's finish"),
   addFromEnd: (text) => addMoves(shown.evaluation.moves, text),
+  // What the review follows ("you" = your solve, "engine" = the engine's line), remembered; the cube follows along
+  get follow() {
+    return followMode;
+  },
+  setFollow: (mode) => {
+    followMode = mode;
+    remember("follow", mode);
+    if (mode === "engine") followEngine();
+    else player.exitPreview();
+  },
+  // Where the engine's line starts (0 = the scramble, else the start of your step index): the review drawn again and the new line on the cube
+  get branch() {
+    return branchIndex;
+  },
+  setBranch: (index) => {
+    branchIndex = index;
+    drawReview();
+    followEngine();
+  },
 };
+
+// What the review follows, from last time, and where the engine's line starts (the scramble for each new review)
+let followMode = recall("follow") === "engine" ? "engine" : "you";
+let branchIndex = 0;
+
+// The engine's line the review follows: its own solve, or the branch off your solution picked
+function currentLine() {
+  return engineLine(shown.evaluation, shown.evaluation.steps[branchIndex] ? branchIndex : 0);
+}
+
+// Whether the engine's line is what's on the cube now
+function lineOnCube() {
+  return player.previewLabel === currentLine().label;
+}
+
+// Puts the engine's line on the cube for following it: at the start of the step your cube is in (the same goal in the line), or where the branch
+// leaves your moves
+function followEngine() {
+  const line = currentLine();
+  const pos = player.inPreview ? -1 : player.position;
+  const step = shown.evaluation.steps.find((one) => pos >= one.start && pos < one.end);
+  showEngineSolve({ from: Math.max(step ? line.parts[step.index].start : 0, line.shared), autoplay: false });
+}
+
+// Shows the engine's line of the review on the cube, its steps on the timeline in their colors (your moves before a branch in grey), at a move
+// (default: the start), playing up to another (default: the end) unless autoplay is off; when it's already on the cube, only the position moves.
+// returnTo = your position when it's closed (default: where you are now)
+function showEngineSolve({ from = 0, to = null, autoplay = true, returnTo = player.inPreview ? 0 : player.position }) {
+  const line = currentLine();
+  // Already on show: move (or play) within it
+  if (lineOnCube()) {
+    if (autoplay) player.play(from, to);
+    else {
+      player.pause();
+      player.seek(from);
+    }
+    return;
+  }
+  const { moves } = line;
+  const steps = line.fingering?.steps ?? [];
+  // One timeline piece per step the line turned, the steps it finished along the way named in its tooltip
+  const segments = line.parts
+    .filter((part) => part.end > part.start)
+    .map((part) => ({
+      name: part.name,
+      start: part.start,
+      end: part.end,
+      // Grey for your moves before a branch, the step's color after
+      color: part.shared ? "" : stepColor(part.index),
+      base: part.shared,
+      also: line.parts.filter((other) => other.solvedWith === part.name).map((other) => other.name),
+    }));
+  player.showPreview({ base: moves.slice(0, from), added: moves.slice(from), label: line.label, segments, baseFingering: steps.slice(0, from), fingering: steps.slice(from), returnTo, playTo: to, autoplay });
+  // Small screens: the cube is above, out of sight
+  if (matchMedia("(max-width: 900px)").matches) viewer.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// Lights up, in the review, the move the cube is on: in your solution, or in the engine's line when that's on the cube
+function highlightReview() {
+  const track = !player.inPreview ? "yours" : shown && lineOnCube() ? "engine" : "";
+  highlightMoves(panels.review, player.position, track);
+}
 
 // Draws the review on show with the time typed so far, the stale banner on top
 function drawReview() {
   renderReview(panels.review, shown.evaluation, readTime(), reviewActions);
   panels.review.prepend(staleBanner);
   markStale();
-  highlightMoves(panels.review, player.inPreview ? -1 : player.position);
+  highlightReview();
 }
 
 // The review panel before any review: how it works, with an example to try (or why there's none on the 2x2)
@@ -568,7 +658,11 @@ async function runReview() {
     });
     clearInterval(timer);
     shown = { evaluation, key };
+    // A new review's engine line starts from the scramble
+    branchIndex = 0;
     drawReview();
+    // Following the engine: its own solve goes on the cube
+    if (followMode === "engine") followEngine();
     setStatus("Review ready.", "ok");
   } catch (e) {
     // A typo in the moves, a bad method field, or the engine failing to load
