@@ -31,6 +31,8 @@ export function createPlayer(els, { onChange = () => {} } = {}) {
   // Your solution, kept while a preview of the engine's moves shows (preview = its label, null = your solution on show)
   let yours = { moves: [], segments: [], fingers: [] };
   let preview = null;
+  // Where your solution's position goes back to when the preview closes
+  let previewReturn = 0;
 
   // ============ TIMELINE ============
   // Builds the timeline's segments: one per step, as wide as its moves; a single grey one when the steps aren't known
@@ -223,29 +225,32 @@ export function createPlayer(els, { onChange = () => {} } = {}) {
     seek(position);
   }
 
-  // A preview of other moves (the engine's): base moves first (greyed on the timeline), then the moves shown, played from the base's end
-  function showPreview({ base, added, label, color, fingering = [] }) {
+  // A preview of other moves (the engine's): base moves first (greyed on the timeline, named baseLabel), then the moves shown, played from the base's
+  // end; segments = the timeline's pieces instead (the engine's own steps), baseFingering = the base's fingertricks when they aren't yours
+  // returnTo = your solution's position when it closes (default: the base's end, where your moves left the cube), playTo = where playing stops
+  // (default: the end), autoplay = false to show the cube at the base's end without playing
+  function showPreview({ base, added, label, color, fingering = [], baseLabel = "Your moves", segments: parts = null, baseFingering = null, returnTo = base.length, playTo = null, autoplay = true }) {
     preview = label;
+    previewReturn = returnTo;
     els.banner.hidden = false;
     els.bannerText.textContent = label;
     const all = [...base, ...added];
-    const parts = [
-      ...(base.length ? [{ name: "Your moves", start: 0, end: base.length, base: true }] : []),
+    parts ??= [
+      ...(base.length ? [{ name: baseLabel, start: 0, end: base.length, base: true }] : []),
       { name: label, start: base.length, end: all.length, color },
     ];
-    // Fingertricks: yours for the base where they line up, then the shown moves'
-    const steps = [...yours.fingers.slice(0, base.length), ...fingering];
+    // Fingertricks: the base's (yours where they line up), then the shown moves'
+    const steps = [...(baseFingering ?? yours.fingers.slice(0, base.length)), ...fingering];
     show({ moves: all, segments: parts, fingers: steps }, base.length);
-    play(base.length, all.length);
+    if (autoplay) play(base.length, playTo ?? all.length);
   }
 
-  // Back to your solution from a preview, at the end of your moves the preview started from
+  // Back to your solution from a preview, at the position the preview gave (where your moves left the cube)
   function exitPreview() {
     if (!preview) return;
-    const at = segments[0]?.base ? segments[0].end : 0;
     preview = null;
     els.banner.hidden = true;
-    show(yours, Math.min(at, yours.moves.length));
+    show(yours, Math.min(previewReturn, yours.moves.length));
   }
 
   return {
@@ -265,6 +270,10 @@ export function createPlayer(els, { onChange = () => {} } = {}) {
     },
     get inPreview() {
       return preview !== null;
+    },
+    // The preview's label (null = your solution on show)
+    get previewLabel() {
+      return preview;
     },
   };
 }
