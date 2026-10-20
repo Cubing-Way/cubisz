@@ -365,9 +365,12 @@ function showSolveInfo() {
 // New scramble: a random-state one from puzzly for the 3x3, cubisz's random moves for the 2x2; your solution was for the old one, so it goes
 async function newRandomScramble() {
   if (is3x3()) {
-    // Wait for the engine, then ask it for a scramble
+    // Wait for the engine, then ask it for a scramble; one that comes after you typed or loaded a solve (or switched puzzle) is dropped
+    const asked = solveVersion;
     await engineReady;
-    setScramble(await randomScramble());
+    const text = await randomScramble();
+    if (asked !== solveVersion) return;
+    setScramble(text);
   } else {
     // cubisz's own random moves
     genRanState();
@@ -377,8 +380,12 @@ async function newRandomScramble() {
   refreshSolve();
 }
 
+// Counts changes to your solve (typed, loaded, a new puzzle), so a random scramble still on its way knows it's too late
+let solveVersion = 0;
+
 // Puts a scramble in the box and on the cube
 function setScramble(text) {
+  solveVersion++;
   scrambleInput.value = text;
   applyCurrentScramble();
 }
@@ -402,6 +409,7 @@ function loadExample() {
 
 // Typing a scramble: applied live, your solution kept on top of it (fixing a typo shouldn't cost you your solution)
 scrambleInput.addEventListener("input", () => {
+  solveVersion++;
   applyCurrentScramble();
   refreshSolve({ keepPosition: true });
 });
@@ -412,7 +420,10 @@ scrambleInput.addEventListener("keydown", (e) => {
 });
 
 // Typing a solution: played live on the cube, the player at its end
-solveInput.addEventListener("input", () => refreshSolve());
+solveInput.addEventListener("input", () => {
+  solveVersion++;
+  refreshSolve();
+});
 
 // New button: a new random scramble
 document.getElementById("scramble-btn").addEventListener("click", () => newRandomScramble());
