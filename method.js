@@ -29,3 +29,9 @@ export const FASTEST_KEEPING = 8;
 export function keepingFor(method) {
   return method.name.startsWith(FASTEST_PREFIX) ? FASTEST_KEEPING : 0;
 }
+
+// Whether a method's runs go to the solve server: every method but the ones expected to run past its 120 s a request (Search fastest takes minutes a
+// run), which solve in the page
+export function onServer(method) {
+  return !keepingFor(method);
+}

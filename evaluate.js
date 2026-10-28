@@ -15,9 +15,11 @@ import {
   speedCostAfter,
   fingering,
   joinSteps,
+  server,
+  RemoteEngineError,
 } from "./puzzly.js";
-// How the engine solves with a method: Search fastest keeping this many, or a plain run (0)
-import { keepingFor } from "./method.js";
+// How the engine solves with a method: Search fastest keeping this many, or a plain run (0), and whether it goes to the solve server
+import { keepingFor, onServer } from "./method.js";
 
 // ============ METHODS ============
 // Methods read (checked) once each, by their data object
@@ -43,6 +45,12 @@ export function reviewable(data) {
 const RUN_CACHE_SIZE = 64;
 const runCache = new Map();
 
+// ============ SOLVE SERVER ============
+// Set once the server can't take any call this session (its month's budget is spent, or it can't be reached): every method solves in the page after that
+let serverOff = false;
+// Methods the server was too slow or too busy for this session: they solve in the page after that, so a long one doesn't wait 120 s every run
+const pageOnly = new Set();
+
 // ============ RUN PROGRESS ============
 // A run's live progress, as puzzly's page follows it: the step (and round) under way, partial solves (Search fastest), table work, and its time once done
 function newProgress(method) {
@@ -51,6 +59,9 @@ function newProgress(method) {
     method: method.name.replace(/\s*\(.*\)\s*$/, ""),
     steps: method.steps,
     keeping: keepingFor(method),
+    // On the solve server (no step-by-step progress comes back from it), or in the page because the server couldn't answer
+    remote: onServer(method) && !serverOff && !pageOnly.has(method.name),
+    fallback: false,
     // When it started, and how long it took once it's done
     started: performance.now(),
     ms: null,
@@ -97,26 +108,44 @@ export function progressText(progress) {
   const name = step ? (step.repeat ? `${step.name} ${progress.round}` : step.name) : "";
   const where = step ? `${name} (step ${progress.index + 1} of ${progress.steps.length})` : "";
   const time = formatMs(progress.ms ?? performance.now() - progress.started);
+  // On the solve server: only the time so far
+  if (progress.remote) return `Solving on the server… ${time}`;
+  // In the page after the server couldn't answer
+  const here = progress.fallback ? "The server couldn't answer, solving here: " : "";
   // Search fastest: its plain run first, then the step it extends and how many partial solves
   if (progress.keeping) {
     const state = step ? `${where}, ${plural(progress.partials, "partial solve")}` : "plain run first";
-    return `Searching for the fastest solve: ${state}… ${time}${progress.tableNote}`;
+    return `${here}Searching for the fastest solve: ${state}… ${time}${progress.tableNote}`;
   }
   // Plain run: the step under way
-  return `Solving ${where || "…"} ${time}${progress.tableNote}`;
+  return `${here}Solving ${where || "…"} ${time}${progress.tableNote}`;
 }
 
-// A finished run's time and table work, e.g. "12.40 s, built 2 tables"
+// A finished run's time and where it ran or its table work, e.g. "12.40 s, built 2 tables" or "3.10 s, on the server"
 export function progressSummary(progress) {
+  const where = progress.remote ? ", on the server" : "";
   const built = progress.built ? `, built ${plural(progress.built, "table")}` : "";
   const loaded = progress.loaded ? `, loaded ${plural(progress.loaded, "stored table")}` : "";
-  return `${formatMs(progress.ms ?? performance.now() - progress.started)}${built}${loaded}`;
+  return `${formatMs(progress.ms ?? performance.now() - progress.started)}${where}${built}${loaded}`;
 }
 
 // ============ ENGINE RUNS ============
 // One engine solve of a method from a spot: puzzly's Search fastest keeping keepingFor(method) (its cheapest whole solve), or a plain run when that's 0;
-// progress follows it as it goes
+// a plain run goes to the solve server first, and the page takes over when the server can't answer; progress follows it as it goes
 async function solveMethod(scramble, method, done, progress) {
+  if (progress.remote) {
+    try {
+      return await server.runMethod(scramble, method, { done });
+    } catch (error) {
+      // A bad call or an engine error would fail the same way in the page
+      if (!(error instanceof RemoteEngineError && error.local)) throw error;
+      // Budget spent or out of reach: no more calls this session; too slow or busy: not for this method
+      if (error.status === 429 || error.status === 0) serverOff = true;
+      else pageOnly.add(method.name);
+      console.warn(`[puzzly] ${progress.method}: the solve server couldn't answer (${error.message}), solving in the page`);
+      Object.assign(progress, { remote: false, fallback: true });
+    }
+  }
   // Table builds and loads, for the live status
   const onProgress = tableListener(progress);
   // Plain run: each step its own pick, lookahead included

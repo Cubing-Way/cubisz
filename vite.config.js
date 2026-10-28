@@ -5,6 +5,8 @@ import { defineConfig } from "vite";
 const CUBING = /[\/]node_modules[\/]cubing[\/](?!.*search-worker-entry)/;
 
 export default defineConfig({
+  // Relative paths in the built site, so it works from a subfolder (GitHub Pages serves it under /cubisz/)
+  base: "./",
   // Workers as ES modules, so puzzly's search worker can split chunks and start its helpers
   worker: { format: "es" },
   build: {

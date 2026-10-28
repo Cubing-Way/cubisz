@@ -9,6 +9,8 @@ A solve review app for the 3x3 (and a 2x2 viewer) in the browser. Paste a scramb
 
 Solving, scrambles, fingerings and move tools come from the [puzzly](https://github.com/Cubing-Way/puzzly) engine.
 
+Engine runs go to puzzly's solve server on AWS (see *Solve server* in puzzly's README), so the page builds no tables for them, except the "Computer fastest" methods: Search fastest takes minutes a run, past the server's 120 s a request, so those solve in the page. When the server can't answer a run (it's busy or too slow, its month's budget is spent, or it can't be reached), the page solves it instead, and keeps solving that method in the page for the rest of the visit (every method, once the budget is spent or the server can't be reached).
+
 ## Using it
 
 1. **Scramble**: paste yours, or press New for a random one. FMC makes the cube ignore slice moves.
@@ -48,7 +50,7 @@ npm run build
 npm run preview
 ```
 
-The site lands in `dist/` as static files; `npm run preview` serves them to check the build.
+The site lands in `dist/` as static files, with relative paths so it works from a subfolder like GitHub Pages' `/cubisz/`; `npm run preview` serves them to check the build.
 
 ## Folder layout
 
@@ -59,13 +61,13 @@ The site lands in `dist/` as static files; `npm run preview` serves them to chec
 | `player.js` | The cube player: step timeline, play and move buttons, keys, the move readout, and previews of the engine's moves |
 | `evaluate.js` | The review engine: splits a solution into the method's steps, compares each with the engine's pick, solves single steps; caches engine runs |
 | `review.js` | Draws the review, the step solver's answer, and moves as chips with their fingertricks |
-| `method.js` | The methods the picker offers (`methods/*.json` first, then puzzly's examples) and which ones search for the fastest solve |
+| `method.js` | The methods the picker offers (`methods/*.json` first, then puzzly's examples), which ones search for the fastest solve, and which go to the solve server |
 | `methods/` | Your own method files (puzzly's Export format) |
 | `api.js` | cubisz's cube API used by `main.js`: mount, size, view, scramble, solution |
 | `renderer.js` | Draws the cube net as SVG stickers, and the 3D view |
 | `scramble.js` | Random scrambles and move parsing (FMC mode included) |
 | `puzzles/` | Cube models: `2x2.js`, `3x3.js`, and `cube.js`, which switches between them |
-| `puzzly.js` | Loads the puzzly engine with its search worker and re-exports its API |
+| `puzzly.js` | Loads the puzzly engine with its search worker, connects to the solve server, and re-exports its API |
 | `puzzly-worker.js`, `puzzly-helper.js` | puzzly's search worker and its helpers for long searches, with the Rust search code |
 | `vite.config.js` | Vite setup: module workers, and cubing.js kept in its own chunk |
 | `style.css` | Styles |
