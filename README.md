@@ -67,8 +67,9 @@ The site lands in `dist/` as static files, with relative paths so it works from 
 | `renderer.js` | Draws the cube net as SVG stickers, and the 3D view |
 | `scramble.js` | Random scrambles and move parsing (FMC mode included) |
 | `puzzles/` | Cube models: `2x2.js`, `3x3.js`, and `cube.js`, which switches between them |
-| `puzzly.js` | Loads the puzzly engine with its search worker, connects to the solve server, and re-exports its API |
+| `puzzly.js` | Loads the puzzly engine with its search and scoring workers and the Rust speed model, connects to the solve server, and re-exports its API |
 | `puzzly-worker.js`, `puzzly-helper.js` | puzzly's search worker and its helpers for long searches, with the Rust search code |
+| `puzzly-scoring.js`, `puzzly-scoring-helper.js` | puzzly's scoring worker (scores answers ranked by speed with the Rust speed model while the search lists more) and its helpers (only on devices with more than 4 threads) |
 | `vite.config.js` | Vite setup: module workers, and cubing.js kept in its own chunk |
 | `style.css` | Styles |
 | `cubieMapping.js`, `debug_eo.js`, `kociemba test.js` | Standalone experiments, not loaded by the page |
