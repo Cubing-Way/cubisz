@@ -19,7 +19,7 @@ import {
   RemoteEngineError,
 } from "./puzzly.js";
 // How the engine solves with a method: Search fastest keeping this many, or a plain run (0), and whether it goes to the solve server
-import { keepingFor, onServer } from "./method.js";
+import { keepingFor, onServer, reviewable } from "./method.js";
 
 // ============ METHODS ============
 // Methods read (checked) once each, by their data object
@@ -33,11 +33,6 @@ function methodOf(data) {
     readMethods.set(data, method);
   }
   return method;
-}
-
-// Whether a method's steps each map onto one stretch of a typed solution (BLD and repeated steps don't), so it can review solves and solve single steps
-export function reviewable(data) {
-  return !data.steps.some((step) => step.buffer || step.untouched || step.repeat);
 }
 
 // ============ RUN CACHE ============
@@ -213,6 +208,11 @@ export function prefetchRun(scramble, methodData) {
 }
 
 // ============ MOVES ============
+// Move text on one line with single spaces: // comments go first (up to their line's end), then brackets reconstructions use, then extra spaces
+export function cleanMoves(text) {
+  return text.replace(/\/\/[^\n]*/g, " ").replace(/[()[\]{}]/g, " ").replace(/\s+/g, " ").trim();
+}
+
 // A move text as a list of moves (rotations included)
 export function words(text) {
   return text.trim().split(/\s+/).filter(Boolean);

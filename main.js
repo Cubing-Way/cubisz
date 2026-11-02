@@ -5,9 +5,9 @@ import { genRanState, scramble } from "./scramble.js";
 // puzzly engine: random-state scrambles, and the fingering the player's readout shows
 import { engineReady, randomScramble, fingering } from "./puzzly.js";
 // Every method, the one the picker starts on, and which ones search (slow)
-import { METHODS, METHOD, keepingFor } from "./method.js";
+import { METHODS, METHOD, keepingFor, reviewable } from "./method.js";
 // The review and step solver engine: reviews, live step splits, single steps, and their live progress
-import { evaluateSolution, prefetchRun, progressText, progressSummary, reviewable, splitSolution, stepsDoneAt, solveFrom, solveProgress, words, plural, engineLine } from "./evaluate.js";
+import { evaluateSolution, prefetchRun, progressText, progressSummary, splitSolution, stepsDoneAt, solveFrom, solveProgress, words, cleanMoves, plural, engineLine } from "./evaluate.js";
 // Drawing reviews, the step solver's answers, notices and move chips
 import { renderReview, renderSolverResult, renderNotice, highlightMoves, stepColor, methodName, methodNote } from "./review.js";
 // The cube player under the cube
@@ -81,11 +81,6 @@ const EXAMPLE = {
 };
 
 // ============ MOVES AND TIME ============
-// Move text on one line with single spaces: // comments go first (up to their line's end), then brackets reconstructions use, then extra spaces
-function cleanMoves(text) {
-  return text.replace(/\/\/[^\n]*/g, " ").replace(/[()[\]{}]/g, " ").replace(/\s+/g, " ").trim();
-}
-
 // S and S' the other way round in a list of moves (S2 stays)
 function swapSlices(moves) {
   return moves.map((move) => (move === "S" ? "S'" : move === "S'" ? "S" : move));
@@ -405,6 +400,31 @@ function loadExample() {
   timeInput.value = EXAMPLE.time;
   refreshSolve();
   runReview();
+}
+
+// Loads a solve sent in the page's address (Pro Timer's "Full analysis" link): #scramble=…&solution=…&time=…&method=…&review=1; true when there was one
+function loadSolveFromLink() {
+  // The part after the # is written like a query string
+  const link = new URLSearchParams(location.hash.slice(1));
+  const sentScramble = link.get("scramble");
+  // No solve in the address: nothing to load
+  if (!sentScramble) return false;
+  // The method it was sent with, when the picker has it
+  const picked = PICKABLE.findIndex((method) => method.name === link.get("method"));
+  if (picked >= 0) methodSelector.value = String(picked);
+  showMethodNote();
+  // Same steps as loadExample
+  setScramble(sentScramble);
+  solveInput.value = link.get("solution") ?? "";
+  timeInput.value = link.get("time") ?? "";
+  refreshSolve();
+  // review=1 starts the review once, and leaves the address: a reload or a shared address shows the solve without spending another review
+  if (link.has("review")) {
+    link.delete("review");
+    history.replaceState(null, "", `#${link}`);
+    runReview();
+  }
+  return true;
 }
 
 // Typing a scramble: applied live, your solution kept on top of it (fixing a typo shouldn't cost you your solution)
@@ -859,8 +879,8 @@ showEmptyReview();
 // Cube sized to the stage now, and again whenever the stage changes size
 fitCube();
 new ResizeObserver(fitCube).observe(container);
-// A first scramble once the engine is in
-newRandomScramble();
+// The solve sent in the address, or else a first scramble once the engine is in
+if (!loadSolveFromLink()) newRandomScramble();
 
 // Engine loaded: the status says so, and the steps of anything typed meanwhile are found
 engineReady.then(

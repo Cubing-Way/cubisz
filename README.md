@@ -22,6 +22,38 @@ Moves use standard notation, the same as puzzly and other cube sites: S turns li
 
 Player keys (outside the text boxes): ← → a move, Shift+← → a step, Home / End, Space to play, Esc to leave a preview of the engine's moves.
 
+A solve can also arrive in the page's address, after the `#`: `#scramble=…&solution=…&time=…&method=…&review=1` (Pro Timer's "Full analysis on Cubisz" link). `loadSolveFromLink` (`main.js`) fills the boxes and the method picker. `review=1` starts the review once, then leaves the address, so a reload or a shared address shows the solve without spending another review.
+
+## Engine for other apps
+
+Other apps can send a solve and get its metrics back without showing this site: `engine.html` is a page with nothing to see, which an app loads in a hidden iframe. Pro Timer uses it.
+
+1. The page tells the app it's ready: `{ type: "cubisz-ready" }`.
+2. The app sends a solve with `postMessage`: `{ type: "cubisz-review", id, scramble, solution, time, method }`. `time` is in seconds (leave it out for no pace figures), and `method` is a method's full name (leave it out for the one the site starts on).
+3. The page answers `{ type: "cubisz-progress", id, run, runs, step }` as each engine run starts, then `{ type: "cubisz-metrics", id, metrics }`, or `{ type: "cubisz-error", id, message }`. An error with no `id` means the engine itself couldn't start.
+4. To list the methods it can pick, the app sends `{ type: "cubisz-methods" }` and gets `{ type: "cubisz-methods", methods, start }`: every method's full name (`APP_METHODS` in `method.js`: the reviewable ones, without the "Computer fastest" ones, since a review with those takes minutes), and the one used when none is picked. This loads no engine, because the worker only starts with the first review.
+
+Only the sites in `ALLOWED_SITES` (`engine.js`) can ask. `engine.js` only passes messages along; the review runs in `engine-worker.js`, a worker, because an app on the same site shares its page's main thread with the iframe, and a timer can't afford a stall. 
+
+These reviews go to the solve server first, like the site's. A 7-step solve is 7 calls: measured on 2026-11-02, about 11 s and 25 GB-seconds, or 18 s and 42 GB-seconds when a new container has to start and build its tables. So the server's budget covers roughly 80 to 130 reviews a month, shared with the site. When the server can't answer (its budget is spent, it's busy, or it can't be reached), they solve on the device instead, as the site does: about 40 seconds on a 4-thread PC, a bit more the first time, when the tables are built and stored. The metrics come out the same either way.
+
+`metrics.js` turns a review (185 KB) into the metrics (about 1.3 KB), small enough to keep with every solve:
+
+| Field | What it is |
+| --- | --- |
+| `version` | This format's version, raised when the fields change |
+| `method`, `complete` | The method's full name, and whether the solution finishes every step |
+| `moves`, `effort`, `regrips` | Your whole solution: moves, effort and hand regrips |
+| `moveScore`, `effortScore` | The engine's pick over yours, averaged over the steps you made moves in: 1 = as good as the engine, above = better |
+| `netMoves`, `netEffort` | Your steps against the engine's picks, counting what each step left for the rest: below 0 = better |
+| `stepEffort` | The same, each step alone |
+| `setups`, `alsoSolved` | Steps that set up the rest, and later steps your moves solved along the way |
+| `engineMoves`, `engineEffort` | The engine's own solve from the scramble |
+| `time`, `tps`, `execution` | Your time, moves per second, effort per second (null with no time, like the two below) |
+| `engineTime` | The engine's own solve at your execution |
+| `netTime`, `choicesTime` | `netEffort` and `stepEffort` as seconds at your execution |
+| `steps` | Each step: `name`, `moves`, `effort`, `engineMoves`, `engineEffort`, `netMoves`, `netEffort`, `solvedBy` (the step whose moves finished this one too) |
+
 ## Run
 
 cubisz uses puzzly from a folder next to it (`../puzzly`), so set that up first, once:
@@ -57,11 +89,14 @@ The site lands in `dist/` as static files, with relative paths so it works from 
 | Path | What's in it |
 | --- | --- |
 | `index.html` | The page, and Vite's entry |
-| `main.js` | Wires the page: your solve's inputs, the method picker, the tabs, the review and the step solver |
+| `main.js` | Wires the page: your solve's inputs, the method picker, the tabs, the review and the step solver; `loadSolveFromLink` fills them from a solve sent in the address |
 | `player.js` | The cube player: step timeline, play and move buttons, keys, the move readout, and previews of the engine's moves |
 | `evaluate.js` | The review engine: splits a solution into the method's steps, compares each with the engine's pick, solves single steps; caches engine runs |
 | `review.js` | Draws the review, the step solver's answer, and moves as chips with their fingertricks |
-| `method.js` | The methods the picker offers (`methods/*.json` first, then puzzly's examples), which ones search for the fastest solve, and which go to the solve server |
+| `engine.html`, `engine.js` | The hidden engine page other apps load in an iframe, and what lists the methods and passes their messages to and from the worker |
+| `engine-worker.js` | Takes a solve, reviews it (on the solve server, or the device when the server can't answer), and answers with its metrics |
+| `metrics.js` | `solveMetrics`: a review as the compact metrics apps get back |
+| `method.js` | The methods the picker offers (`methods/*.json` first, then puzzly's examples), which ones search for the fastest solve, which go to the solve server, which can be reviewed (`reviewable`), and which apps can pick (`APP_METHODS`) |
 | `methods/` | Your own method files (puzzly's Export format) |
 | `api.js` | cubisz's cube API used by `main.js`: mount, size, view, scramble, solution |
 | `renderer.js` | Draws the cube net as SVG stickers, and the 3D view |
@@ -70,7 +105,7 @@ The site lands in `dist/` as static files, with relative paths so it works from 
 | `puzzly.js` | Loads the puzzly engine with its search and scoring workers and the Rust speed model, connects to the solve server, and re-exports its API |
 | `puzzly-worker.js`, `puzzly-helper.js` | puzzly's search worker and its helpers for long searches, with the Rust search code |
 | `puzzly-scoring.js`, `puzzly-scoring-helper.js` | puzzly's scoring worker (scores answers ranked by speed with the Rust speed model while the search lists more) and its helpers (only on devices with more than 4 threads) |
-| `vite.config.js` | Vite setup: module workers, and cubing.js kept in its own chunk |
+| `vite.config.js` | Vite setup: the two pages (`index.html` and `engine.html`), module workers, and cubing.js kept in its own chunk |
 | `style.css` | Styles |
 | `cubieMapping.js`, `debug_eo.js`, `kociemba test.js` | Standalone experiments, not loaded by the page |
 | `old/` | The old renderer |

@@ -35,3 +35,11 @@ export function keepingFor(method) {
 export function onServer(method) {
   return !keepingFor(method);
 }
+
+// Whether a method's steps each map onto one stretch of a typed solution (BLD and repeated steps don't), so it can review solves and solve single steps
+export function reviewable(data) {
+  return !data.steps.some((step) => step.buffer || step.untouched || step.repeat);
+}
+
+// The methods other apps can pick: reviewable, and not the ones that search for the fastest solve, since a review with those takes minutes
+export const APP_METHODS = METHODS.filter((method) => reviewable(method) && !keepingFor(method));
