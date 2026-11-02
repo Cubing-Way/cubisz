@@ -26,6 +26,17 @@ function stepMetrics(step) {
   };
 }
 
+// The engine runs a review used, keeping only what a review reads of them, so the same review can be rebuilt later without the engine (seedRuns in evaluate.js)
+function savedRuns(evaluation) {
+  return evaluation.runs.map(({ at, run }) => ({
+    at,
+    moves: run.moves,
+    starts: run.starts,
+    text: run.wide ?? run.solution,
+    rows: run.steps.map((step) => step.wide ?? step.solution.toString()),
+  }));
+}
+
 // The whole solve's metrics, from a review and your time in seconds (no time = no pace figures)
 export function solveMetrics(evaluation, time = null) {
   const { rating, pace } = scoreEvaluation(evaluation, time);
@@ -58,5 +69,6 @@ export function solveMetrics(evaluation, time = null) {
     netTime: pace ? round(pace.netTime) : null,
     choicesTime: pace ? round(pace.choicesTime) : null,
     steps: evaluation.steps.map(stepMetrics),
+    runs: savedRuns(evaluation),
   };
 }

@@ -22,7 +22,7 @@ Moves use standard notation, the same as puzzly and other cube sites: S turns li
 
 Player keys (outside the text boxes): ← → a move, Shift+← → a step, Home / End, Space to play, Esc to leave a preview of the engine's moves.
 
-A solve can also arrive in the page's address, after the `#`: `#scramble=…&solution=…&time=…&method=…&review=1` (Pro Timer's "Full analysis on Cubisz" link). `loadSolveFromLink` (`main.js`) fills the boxes and the method picker. `review=1` starts the review once, then leaves the address, so a reload or a shared address shows the solve without spending another review.
+A solve can also arrive in the page's address, after the `#`: `#scramble=…&solution=…&time=…&method=…&runs=…` (Pro Timer's "Full analysis on Cubisz" link). `loadSolveFromLink` (`main.js`) fills the boxes and the method picker. `runs` holds the engine runs of a review already made, as `metrics.js` saves them: `seedRuns` (`evaluate.js`) puts them in the run cache, and the review that follows finds them there, so it calls no engine. Only the engine runs need the engine; the rest of a review (the steps, effort, fingertricks, comparisons) is worked out from them in about 100 ms. So opening, reloading or sharing that address costs nothing, and gives the same review, byte for byte. Anything further that needs a new run, like the step solver from another point, goes to the engine as usual.
 
 ## Engine for other apps
 
@@ -37,7 +37,7 @@ Only the sites in `ALLOWED_SITES` (`engine.js`) can ask. `engine.js` only passes
 
 These reviews go to the solve server first, like the site's. A 7-step solve is 7 calls: measured on 2026-11-02, about 11 s and 25 GB-seconds, or 18 s and 42 GB-seconds when a new container has to start and build its tables. So the server's budget covers roughly 80 to 130 reviews a month, shared with the site. When the server can't answer (its budget is spent, it's busy, or it can't be reached), they solve on the device instead, as the site does: about 40 seconds on a 4-thread PC, a bit more the first time, when the tables are built and stored. The metrics come out the same either way.
 
-`metrics.js` turns a review (185 KB) into the metrics (about 1.3 KB), small enough to keep with every solve:
+`metrics.js` turns a review (185 KB) into the metrics (about 3 KB with CFOP level 3, 1.9 KB of it the engine runs), small enough to keep with every solve:
 
 | Field | What it is |
 | --- | --- |
@@ -53,6 +53,7 @@ These reviews go to the solve server first, like the site's. A 7-step solve is 7
 | `engineTime` | The engine's own solve at your execution |
 | `netTime`, `choicesTime` | `netEffort` and `stepEffort` as seconds at your execution |
 | `steps` | Each step: `name`, `moves`, `effort`, `engineMoves`, `engineEffort`, `netMoves`, `netEffort`, `solvedBy` (the step whose moves finished this one too) |
+| `runs` | The review's engine runs, one per place a step starts: `at` (your moves before it), `moves`, `starts`, `text` (the whole run) and `rows` (each step's moves). They rebuild the review with no engine call (see above) |
 
 ## Run
 
@@ -95,7 +96,7 @@ The site lands in `dist/` as static files, with relative paths so it works from 
 | `review.js` | Draws the review, the step solver's answer, and moves as chips with their fingertricks |
 | `engine.html`, `engine.js` | The hidden engine page other apps load in an iframe, and what lists the methods and passes their messages to and from the worker |
 | `engine-worker.js` | Takes a solve, reviews it (on the solve server, or the device when the server can't answer), and answers with its metrics |
-| `metrics.js` | `solveMetrics`: a review as the compact metrics apps get back |
+| `metrics.js` | `solveMetrics`: a review as the compact metrics apps get back, with its engine runs (`savedRuns`) |
 | `method.js` | The methods the picker offers (`methods/*.json` first, then puzzly's examples), which ones search for the fastest solve, which go to the solve server, which can be reviewed (`reviewable`), and which apps can pick (`APP_METHODS`) |
 | `methods/` | Your own method files (puzzly's Export format) |
 | `api.js` | cubisz's cube API used by `main.js`: mount, size, view, scramble, solution |

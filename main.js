@@ -7,7 +7,7 @@ import { engineReady, randomScramble, fingering } from "./puzzly.js";
 // Every method, the one the picker starts on, and which ones search (slow)
 import { METHODS, METHOD, keepingFor, reviewable } from "./method.js";
 // The review and step solver engine: reviews, live step splits, single steps, and their live progress
-import { evaluateSolution, prefetchRun, progressText, progressSummary, splitSolution, stepsDoneAt, solveFrom, solveProgress, words, cleanMoves, plural, engineLine } from "./evaluate.js";
+import { evaluateSolution, seedRuns, prefetchRun, progressText, progressSummary, splitSolution, stepsDoneAt, solveFrom, solveProgress, words, cleanMoves, plural, engineLine } from "./evaluate.js";
 // Drawing reviews, the step solver's answers, notices and move chips
 import { renderReview, renderSolverResult, renderNotice, highlightMoves, stepColor, methodName, methodNote } from "./review.js";
 // The cube player under the cube
@@ -402,7 +402,7 @@ function loadExample() {
   runReview();
 }
 
-// Loads a solve sent in the page's address (Pro Timer's "Full analysis" link): #scramble=…&solution=…&time=…&method=…&review=1; true when there was one
+// Loads a solve sent in the page's address (Pro Timer's "Full analysis" link): #scramble=…&solution=…&time=…&method=…&runs=…; true when there was one
 function loadSolveFromLink() {
   // The part after the # is written like a query string
   const link = new URLSearchParams(location.hash.slice(1));
@@ -418,11 +418,12 @@ function loadSolveFromLink() {
   solveInput.value = link.get("solution") ?? "";
   timeInput.value = link.get("time") ?? "";
   refreshSolve();
-  // review=1 starts the review once, and leaves the address: a reload or a shared address shows the solve without spending another review
-  if (link.has("review")) {
-    link.delete("review");
-    history.replaceState(null, "", `#${link}`);
-    runReview();
+  // The engine runs sent with it rebuild the review with no engine call, so opening, reloading or sharing the address costs nothing; bad ones just leave the solve loaded
+  if (link.has("runs") && picked >= 0) {
+    seedRuns(currentScramble, solutionMoves.join(" "), currentMethod(), link.get("runs")).then(
+      () => runReview(),
+      (e) => console.warn("[cubisz] the address's engine runs can't be read:", e),
+    );
   }
   return true;
 }

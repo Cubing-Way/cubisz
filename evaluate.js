@@ -124,6 +124,18 @@ export function progressSummary(progress) {
   return `${formatMs(progress.ms ?? performance.now() - progress.started)}${where}${built}${loaded}`;
 }
 
+// Puts saved engine runs (the `runs` of metrics.js, as JSON text) in the run cache, so a review of this same solve finds them there and calls no engine
+export async function seedRuns(scramble, solution, methodData, runsText) {
+  await engineReady;
+  const method = methodOf(methodData);
+  const plain = words(solution).map(plainMove);
+  JSON.parse(runsText).forEach(({ at, moves, starts, text, rows }) => {
+    // Only what a review reads of a run; each step's name comes from the method
+    const run = { solution: text, moves, starts, steps: rows.map((row, index) => ({ name: method.steps[index].name, solution: row })) };
+    runCache.set(runKey(scramble, method, plain.slice(0, at).join(" ")), { run: Promise.resolve(run), progress: { ...newProgress(method), remote: false, ms: 0 } });
+  });
+}
+
 // ============ ENGINE RUNS ============
 // One engine solve of a method from a spot: puzzly's Search fastest keeping keepingFor(method) (its cheapest whole solve), or a plain run when that's 0;
 // a plain run goes to the solve server first, and the page takes over when the server can't answer; progress follows it as it goes
@@ -490,6 +502,8 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
   // Your whole solution's fingering, each step starting over where it starts (the hands carry on from one step to the next)
   const stepStarts = [0, ...ends].filter((at) => at < moves.length);
   const yours = runFigures(all, all ? countMoves(all) : 0, stepStarts, true);
+  // The engine runs this review uses, by how many of your moves come before them
+  const usedRuns = new Map();
   const steps = [];
   for (let index = 0; index < count; index++) {
     const start = starts[index];
@@ -501,6 +515,7 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
     // A new spot: say which run is going, from which step, and that run's live progress
     if (index === 0 || start !== starts[index - 1]) onProgress(spots.indexOf(start) + 1, runs, method.steps[index].name, runProgress(scramble, method, startMoves));
     const run = await pending;
+    usedRuns.set(start, run);
     // The engine's answer for this step, cut where this step's goal first holds (the same yardstick as yours), and the rest of its run after it
     const { pick, rest } = enginePick(scramble, plain.slice(0, start), run, method.steps, index, before === "");
     // Your moves for this step (null = your solution stops in it), and where they end
@@ -527,7 +542,9 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
     // Started first, so its live progress can be passed on
     const pending = cachedRun(scramble, method, plain.join(" "));
     onProgress(runs, runs, "the end of yours", runProgress(scramble, method, plain.join(" ")));
-    fromYourEnd = methodFigures(await pending, false);
+    const run = await pending;
+    usedRuns.set(moves.length, run);
+    fromYourEnd = methodFigures(run, false);
   }
   // The engine's whole method solution from the scramble (the first run starts there)
   const engine = steps[0].fromHere;
@@ -544,6 +561,8 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
     engine,
     fromYourEnd,
     steps,
+    // The engine runs it used, which rebuild this review without the engine (see seedRuns): [{ at: your moves before the run, run }]
+    runs: [...usedRuns].map(([at, run]) => ({ at, run })),
   };
 }
 
