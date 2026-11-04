@@ -47,15 +47,16 @@ let serverOff = false;
 const pageOnly = new Set();
 
 // ============ RUN PROGRESS ============
-// A run's live progress, as puzzly's page follows it: the step (and round) under way, partial solves (Search fastest), table work, and its time once done
-function newProgress(method) {
+// A run's live progress, as puzzly's page follows it: the step (and round) under way, partial solves (Search fastest), table work, and its time once done;
+// deviceOnly keeps the run off the solve server
+function newProgress(method, deviceOnly = false) {
   return {
     // The method's name without its note in brackets, its steps, and how many partial solves Search fastest keeps (0 = a plain run)
     method: method.name.replace(/\s*\(.*\)\s*$/, ""),
     steps: method.steps,
     keeping: keepingFor(method),
     // On the solve server (no step-by-step progress comes back from it), or in the page because the server couldn't answer
-    remote: onServer(method) && !serverOff && !pageOnly.has(method.name),
+    remote: onServer(method) && !deviceOnly && !serverOff && !pageOnly.has(method.name),
     fallback: false,
     // When it started, and how long it took once it's done
     started: performance.now(),
@@ -185,8 +186,8 @@ function runKey(scramble, method, done) {
 }
 
 // A method run from one spot, made once: asking again for the same method, scramble and moves before gets the same run (finished or still going),
-// so the review, the step solver and steps starting from the same spot share it
-function cachedRun(scramble, method, done = "") {
+// so the review, the step solver and steps starting from the same spot share it; deviceOnly makes a new run on this device, never on the solve server
+function cachedRun(scramble, method, done = "", deviceOnly = false) {
   const key = runKey(scramble, method, done);
   let entry = runCache.get(key);
   if (entry) {
@@ -194,7 +195,7 @@ function cachedRun(scramble, method, done = "") {
     runCache.delete(key);
   } else {
     // A new run with its live progress
-    const progress = newProgress(method);
+    const progress = newProgress(method, deviceOnly);
     entry = { run: solveMethod(scramble, method, done, progress), progress };
     // Its time once done; one that fails is dropped, so asking again tries again
     entry.run.then(
@@ -481,8 +482,9 @@ export function setupSign(step) {
 
 // ============ REVIEW ============
 // Review a typed solution against a method: per step, your moves (with where they are in your solution) and the engine's pick from the same spot,
-// and the engine's whole way on from there (onProgress hears which engine run is going, of how many, the step it starts from, and that run's live progress)
-export async function evaluateSolution(scramble, solution, methodData, onProgress = () => {}) {
+// and the engine's whole way on from there (onProgress hears which engine run is going, of how many, the step it starts from, and that run's live progress);
+// deviceOnly solves every run on this device and never calls the solve server, for batches of reviews that would spend its whole budget
+export async function evaluateSolution(scramble, solution, methodData, onProgress = () => {}, { deviceOnly = false } = {}) {
   await engineReady;
   if (!reviewable(methodData)) throw new Error("this method has BLD or repeated steps, which don't map onto one stretch of a solution.");
   const method = methodOf(methodData);
@@ -511,7 +513,7 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
     const before = moves.slice(0, start).join(" ");
     // The engine starts from your moves in plain turns, so it knows how the cube is held (a spot already run comes from the cache)
     const startMoves = plain.slice(0, start).join(" ");
-    const pending = cachedRun(scramble, method, startMoves);
+    const pending = cachedRun(scramble, method, startMoves, deviceOnly);
     // A new spot: say which run is going, from which step, and that run's live progress
     if (index === 0 || start !== starts[index - 1]) onProgress(spots.indexOf(start) + 1, runs, method.steps[index].name, runProgress(scramble, method, startMoves));
     const run = await pending;
@@ -540,7 +542,7 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
   let fromYourEnd = null;
   if (unfinishedTail) {
     // Started first, so its live progress can be passed on
-    const pending = cachedRun(scramble, method, plain.join(" "));
+    const pending = cachedRun(scramble, method, plain.join(" "), deviceOnly);
     onProgress(runs, runs, "the end of yours", runProgress(scramble, method, plain.join(" ")));
     const run = await pending;
     usedRuns.set(moves.length, run);

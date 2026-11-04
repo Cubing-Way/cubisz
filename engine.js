@@ -38,5 +38,5 @@ window.addEventListener("message", ({ data, origin, source }) => {
   }
 });
 
-// Tells the app it can send messages (this one holds no data, so any site may see it)
-window.parent.postMessage({ type: "cubisz-ready" }, "*");
+// Tells the app it can send messages, and that this page honours deviceOnly, since an older page would ignore it and use the server (this holds no data, so any site may see it)
+window.parent.postMessage({ type: "cubisz-ready", deviceOnly: true }, "*");
