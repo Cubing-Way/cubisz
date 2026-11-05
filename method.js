@@ -33,17 +33,14 @@ export function keepingFor(method) {
 // A method's FMC version has this at the start of its name
 const FMC_PREFIX = "FMC: ";
 
-// How long one engine run searches for fewer moves (a review makes one run per spot a step starts from); 20 s rarely found more than 10 s
-export const FMC_BUDGET_MS = 10_000;
-
 // FMC versions made so far, by method, so a method always gets the same one
 const fmcVersions = new Map();
 
-// A method's FMC version: the same goals, each step taking its own fewest moves, so its plain run is quick and leaves the time to puzzly's method search
+// A method's FMC version: the same steps, each picking its answer by fewest moves instead of speed (a step's lookahead then counts moves too)
 export function fmcMethod(method) {
   if (!fmcVersions.has(method)) {
-    // Speed ranking, lookahead, extra moves and avoided faces only help a solve turn fast, so they go
-    const steps = method.steps.map((step) => ({ ...step, rank: "moves", lookahead: 0, extraMoves: 0, avoid: "" }));
+    // Avoided faces only make a step faster to turn, so they go; alg sets stay, as a human solves those steps
+    const steps = method.steps.map((step) => ({ ...step, rank: "moves", avoid: "" }));
     fmcVersions.set(method, { ...method, name: `${FMC_PREFIX}${method.name}`, steps });
   }
   return fmcVersions.get(method);
@@ -54,9 +51,9 @@ export function isFmc(method) {
   return method.name.startsWith(FMC_PREFIX);
 }
 
-// Whether a method's runs go to the solve server: not Search fastest, which takes minutes, and not FMC, whose search always uses all its time
+// Whether a method's runs go to the solve server: every one but Search fastest, which takes minutes a run, past the server's 120 s a request
 export function onServer(method) {
-  return !keepingFor(method) && !isFmc(method);
+  return !keepingFor(method);
 }
 
 // Whether a method's steps each map onto one stretch of a typed solution (BLD and repeated steps don't), so it can review solves and solve single steps

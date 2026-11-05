@@ -4,7 +4,6 @@ import {
   engineReady,
   readMethod,
   runMethod,
-  searchMethod,
   beamSearchMethod,
   reachesGoal,
   gripRotations,
@@ -20,7 +19,7 @@ import {
   RemoteEngineError,
 } from "./puzzly.js";
 // How the engine solves with a method: Search fastest keeping this many, or a plain run (0), and whether it goes to the solve server
-import { keepingFor, onServer, reviewable, isFmc, FMC_BUDGET_MS } from "./method.js";
+import { keepingFor, onServer, reviewable, isFmc } from "./method.js";
 
 // ============ METHODS ============
 // Methods read (checked) once each, by their data object
@@ -56,9 +55,6 @@ function newProgress(method, deviceOnly = false) {
     method: method.name.replace(/\s*\(.*\)\s*$/, ""),
     steps: method.steps,
     keeping: keepingFor(method),
-    // FMC: puzzly's method search, and the fewest moves it has found so far (null = no run yet)
-    fmc: isFmc(method),
-    best: null,
     // On the solve server (no step-by-step progress comes back from it), or in the page because the server couldn't answer
     remote: onServer(method) && !deviceOnly && !serverOff && !pageOnly.has(method.name),
     fallback: false,
@@ -112,11 +108,6 @@ export function progressText(progress) {
   if (progress.remote) return `Solving on the server… ${time}`;
   // In the page after the server couldn't answer
   const here = progress.fallback ? "The server couldn't answer, solving here: " : "";
-  // FMC: the search's best run so far
-  if (progress.fmc) {
-    const state = progress.best === null ? "plain run first" : `best so far ${plural(progress.best, "move")}`;
-    return `${here}Searching for the fewest moves: ${state}… ${time}${progress.tableNote}`;
-  }
   // Search fastest: its plain run first, then the step it extends and how many partial solves
   if (progress.keeping) {
     const state = step ? `${where}, ${plural(progress.partials, "partial solve")}` : "plain run first";
@@ -165,19 +156,6 @@ async function solveMethod(scramble, method, done, progress) {
   }
   // Table builds and loads, for the live status
   const onProgress = tableListener(progress);
-  // FMC: puzzly's method search, the fewest moves it finds in its time; it starts from the plain run, so it never does worse
-  if (progress.fmc) {
-    const found = await searchMethod(scramble, method, {
-      done,
-      budgetMs: FMC_BUDGET_MS,
-      onProgress,
-      // Each shorter run, for the live status
-      onBetter: (run) => (progress.best = run.moves),
-    });
-    // No run got through every step
-    if (!found.best) throw new Error("no solve gets through every step.");
-    return found.best;
-  }
   // Plain run: each step its own pick, lookahead included
   if (!progress.keeping) {
     return runMethod(scramble, method, {
@@ -514,13 +492,13 @@ function accuracyFrom(share) {
   return Math.min(100, Math.max(0, CURVE.scale * Math.exp(-CURVE.decay * share) - CURVE.shift));
 }
 
-// Effort from these moves until a step's goal holds, following a line of moves (0 when the goal already holds)
-function effortTo(scramble, moves, plain, line, methodSteps, target) {
+// Moves or effort (judged) from these moves until a step's goal holds, following a line of moves (0 when the goal already holds)
+function costTo(scramble, moves, plain, line, methodSteps, target, judged) {
   const { pick } = enginePick(scramble, plain, { steps: [{ name: "", solution: line }] }, methodSteps, target, moves.length === 0);
-  return restFigures(pick, moves.join(" ")).speed;
+  return restFigures(pick, moves.join(" "))[judged];
 }
 
-// Your answer's place among the answers the engine compared at this spot: { place (0 = not listed), of, gap (effort behind its best) }, or null with no list
+// Your answer's place among the answers the engine compared at this spot: { place (0 = not listed), of, gap (moves or effort behind its best, as the step ranks) }, or null with no list
 function rankOf(step, run) {
   // A review rebuilt from saved runs keeps only your own answer's place, which holds while your moves are the same
   if (run.savedRank?.text === step.yours.text) return run.savedRank;
@@ -546,15 +524,15 @@ function addAccuracy(scramble, steps, moves, plain, methodSteps, usedRuns, judge
     const target = Math.min(index + (methodSteps[index].lookahead ?? 0), methodSteps.length - 1);
     // The engine's way on from the end of your step (nothing after the last step)
     const next = steps[index + 1];
-    const yourRest = next ? effortTo(scramble, moves.slice(0, step.end), plain.slice(0, step.end), next.fromHere.text, methodSteps, target) : 0;
+    const yourRest = next ? costTo(scramble, moves.slice(0, step.end), plain.slice(0, step.end), next.fromHere.text, methodSteps, target, judged) : 0;
     // The engine's way on after its own pick
     const pickMoves = words(step.engine.text);
-    const pickRest = effortTo(scramble, [...moves.slice(0, step.start), ...pickMoves], [...plain.slice(0, step.start), ...pickMoves.map(plainMove)], step.engineRest.text, methodSteps, target);
+    const pickRest = costTo(scramble, [...moves.slice(0, step.start), ...pickMoves], [...plain.slice(0, step.start), ...pickMoves.map(plainMove)], step.engineRest.text, methodSteps, target, judged);
     // Your way against the engine's, below 0 = better; the engine's exact moves lose nothing
-    const estimate = step.yours.text === step.engine.text ? 0 : step.yours.speed + yourRest - (step.engine.speed + pickRest);
+    const estimate = step.yours.text === step.engine.text ? 0 : step.yours[judged] + yourRest - (step.engine[judged] + pickRest);
     const rank = rankOf(step, usedRuns.get(step.start));
-    // FMC counts the whole solve your step leads to against the engine's from the same spot; otherwise a listed answer uses the engine's own gap, since that's the ranking it picked by
-    const lost = judged === "moves" ? step.net.moves : rank?.place ? rank.gap : estimate;
+    // A listed answer uses the engine's own gap, since that's the ranking it picked by (in moves with FMC, whose steps rank by moves)
+    const lost = rank?.place ? rank.gap : estimate;
     // As a share of the engine's whole solve, so it means the same in a short method and a long one
     const share = (100 * Math.max(0, lost)) / engineTotal;
     step.accuracy = { lost, share, percent: accuracyFrom(share), label: CLASSES.find(([limit]) => share <= limit)[1], rank };

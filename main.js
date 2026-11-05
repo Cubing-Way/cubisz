@@ -5,7 +5,7 @@ import { genRanState, scramble } from "./scramble.js";
 // puzzly engine: random-state scrambles, and the fingering the player's readout shows
 import { engineReady, randomScramble, fingering } from "./puzzly.js";
 // Every method, the one the picker starts on, and which ones search (slow)
-import { METHODS, METHOD, keepingFor, reviewable, fmcMethod, isFmc } from "./method.js";
+import { METHODS, METHOD, keepingFor, reviewable, fmcMethod } from "./method.js";
 // The review and step solver engine: reviews, live step splits, single steps, and their live progress
 import { evaluateSolution, seedRuns, prefetchRun, progressText, progressSummary, splitSolution, stepsDoneAt, solveFrom, solveProgress, words, cleanMoves, plural, engineLine } from "./evaluate.js";
 // Drawing reviews, the step solver's answers, notices and move chips
@@ -169,8 +169,8 @@ function currentMethod() {
 // The picked method's note under the pickers, and the slow warning beside its label
 function showMethodNote() {
   const method = currentMethod();
-  // What makes this method slow: the search for the fewest moves, the search for the fastest solve, or nothing
-  const slow = isFmc(method) ? "Searches for the fewest moves: a review takes a minute or two." : keepingFor(method) > 0 ? "Searches for the fastest solve: a review can take minutes." : "";
+  // What makes this method slow: the search for the fastest solve, or nothing
+  const slow = keepingFor(method) > 0 ? "Searches for the fastest solve: a review can take minutes." : "";
   methodSlow.hidden = !slow;
   methodNoteLine.textContent = [methodNote(method.name), slow].filter(Boolean).join(" · ");
 }

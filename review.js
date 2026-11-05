@@ -652,7 +652,7 @@ function explainer() {
   const items = el("ul");
   for (const text of [
     // Only in an FMC review
-    ...(judged === "moves" ? ["FMC: the engine searches for the fewest moves it can find with this method (about 10 s from each spot, so it may not be the very fewest). Verdicts and accuracy count moves here, not effort. A slice turn counts as one move, as the engine counts it."] : []),
+    ...(judged === "moves" ? ["FMC: each of the engine's steps takes the answer with the fewest moves instead of the fastest to turn, looking ahead as far as the method does (OLL and PLL still come from their usual algs). Verdicts and accuracy count moves here, not effort. A slice turn counts as one move, as the engine counts it."] : []),
     "Effort is how hard moves are to turn, counted in easy turns: an R or a U flick is 1; regrips, awkward grips and slow layers (D, B) cost more. Lower is faster. With your solve time, effort turns into seconds at your own pace.",
     "Follow your solve: each of your steps against the engine's pick from the exact cube your moves left, with the same method. Its verdict also counts what the step left for the steps after it, so a slower pair that skips OLL can still come out ahead.",
     "Follow the engine's solve: the cube plays the engine's own solve from the scramble, and each of its steps is shown with your step for the same goal under it (from your cube, so the cases differ), like a race; the totals after each step say who's ahead.",
