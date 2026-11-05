@@ -1618,10 +1618,10 @@ body {
   font-size: 12.5px;
 }
 
-/* Summary tiles: three in a row */
+/* Summary tiles: as many in a row as fit */
 .tiles {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
 }
 
@@ -1851,6 +1851,13 @@ body {
 .verdict.worse {
   background: var(--error-bg);
   color: var(--error);
+}
+
+/* A step's accuracy: a verdict pill made bigger, so it catches the eye */
+.step-accuracy {
+  padding: 4px 11px;
+  font-size: 14px;
+  font-weight: 750;
 }
 
 /* Card body: your moves, the engine's, and a note */

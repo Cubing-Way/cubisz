@@ -49,6 +49,24 @@ function clock(seconds) {
   return `${minutes}:${(seconds - minutes * 60).toFixed(2).padStart(5, "0")}`;
 }
 
+// A place as words: 1st, 2nd, 3rd, 4th, up to 11th to 13th
+function ordinal(place) {
+  const last = place % 100 >= 11 && place % 100 <= 13 ? 0 : place % 10;
+  return `${place}${["th", "st", "nd", "rd"][last] ?? "th"}`;
+}
+
+// A tint for an accuracy, going by the whole percent shown: green from 80%, amber from 50%, red below
+function accuracyTone(value) {
+  if (value === null) return "";
+  const shown = Math.round(value);
+  return shown >= 80 ? "better" : shown >= 50 ? "warn" : "worse";
+}
+
+// A step's accuracy in a few words: "96% · 2nd best", or "64% · Inaccuracy" when your answer isn't among those the engine compared
+function accuracyText({ percent, label, rank }) {
+  return `${Math.round(percent)}% · ${rank?.place > 1 ? `${ordinal(rank.place)} best` : label}`;
+}
+
 // Names in a sentence: "A", "A and B", "A, B and C"
 function list(names) {
   return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
@@ -428,6 +446,7 @@ function stepNumbers(step, pace, actions) {
       ["What it leaves vs the pick", step.after.moves ? `${signed(-step.setup.moves)} moves · ${signed(-step.setup.speed, 1)} effort` : "the cube solved"],
       ["Net, with what it leaves", `${signed(step.net.moves)} moves · ${signed(step.net.speed, 1)} effort${secs(step.net.speed)}`],
       ["Engine from here to the end", figures(step.fromHere)],
+      ["Accuracy", `${accuracyText(step.accuracy)} · ${Math.max(0, step.accuracy.lost).toFixed(1)} effort lost${step.accuracy.rank?.place ? ` · ${ordinal(step.accuracy.rank.place)} of the ${step.accuracy.rank.of} answers the engine compared` : ""}`],
     ]),
   );
   // The engine's whole way on from here, on the cube
@@ -471,6 +490,8 @@ function stepCard(step, pace, actions) {
     return card;
   }
   head.append(el("span", "step-count", plural(step.yours.moves, "move")));
+  // How close it came to the engine's best, as a tinted pill that catches the eye
+  head.append(el("span", `verdict step-accuracy ${accuracyTone(step.accuracy.percent)}`, accuracyText(step.accuracy)));
   if (verdictInfo) head.append(el("span", `verdict ${verdictInfo.tone}`, verdictInfo.text));
   // Body: your moves, then the engine's pick (or a note that it's the same), what the verdict counts, and the numbers folded away
   const body = el("div", "step-body");
@@ -614,6 +635,7 @@ function explainer() {
     "Follow your solve: each of your steps against the engine's pick from the exact cube your moves left, with the same method. Its verdict also counts what the step left for the steps after it, so a slower pair that skips OLL can still come out ahead.",
     "Follow the engine's solve: the cube plays the engine's own solve from the scramble, and each of its steps is shown with your step for the same goal under it (from your cube, so the cases differ), like a race; the totals after each step say who's ahead.",
     "Branch here (following the engine): the engine's line follows your moves up to that step, then solves your cube from there, so you see what it would have done after your own start.",
+    "Accuracy is how close each step came to the engine's best, like chess.com's: the answers the engine compared rank yours, and the effort you lost against its best sets the percentage (it counts as many steps ahead as the method looks ahead). Answers it didn't compare get an estimate.",
     "Under each move: the suggested fingertrick (R / L = right or left hand). The colored line shows the hand, ↻ marks a regrip. Click a move to see the cube after it.",
   ]) items.append(el("li", "", text));
   details.append(items);
@@ -656,10 +678,12 @@ export function renderReview(container, evaluation, time, actions) {
   if (note) title.append(el("p", "muted", note));
   head.append(title);
   review.append(head);
-  // Summary: your solve, the engine's with the same method, and your step choices together
+  // Summary: your accuracy, your solve, the engine's with the same method, and your step choices together
   const total = overall(rating, pace);
   const tiles = el("div", "tiles");
   tiles.append(
+    // How close your step choices came to the engine's best
+    tile("Accuracy", rating.accuracy === null ? "—" : `${Math.round(rating.accuracy)}%`, rating.steps ? `over ${plural(rating.steps, "step")}, as ${methodName(evaluation.method)} judges them` : "no step to rate yet", accuracyTone(rating.accuracy)),
     tile("Your solve", plural(evaluation.yours.moves, "move"), pace ? `${clock(pace.time)} · ${pace.tps.toFixed(2)} TPS` : "Add your time to see TPS and seconds"),
     tile(
       "Engine, same method",

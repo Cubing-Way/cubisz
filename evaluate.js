@@ -130,9 +130,9 @@ export async function seedRuns(scramble, solution, methodData, runsText) {
   await engineReady;
   const method = methodOf(methodData);
   const plain = words(solution).map(plainMove);
-  JSON.parse(runsText).forEach(({ at, moves, starts, text, rows }) => {
-    // Only what a review reads of a run; each step's name comes from the method
-    const run = { solution: text, moves, starts, steps: rows.map((row, index) => ({ name: method.steps[index].name, solution: row })) };
+  JSON.parse(runsText).forEach(({ at, moves, starts, text, rows, rank }) => {
+    // Only what a review reads of a run, with your answer's place for accuracy; each step's name comes from the method
+    const run = { solution: text, moves, starts, savedRank: rank ?? null, steps: rows.map((row, index) => ({ name: method.steps[index].name, solution: row })) };
     runCache.set(runKey(scramble, method, plain.slice(0, at).join(" ")), { run: Promise.resolve(run), progress: { ...newProgress(method), remote: false, ms: 0 } });
   });
 }
@@ -480,6 +480,73 @@ export function setupSign(step) {
   return Math.sign(step.setup.speed);
 }
 
+// ============ ACCURACY ============
+// Lichess's published accuracy curve: turns the share of the game lost on one move into a percentage
+const CURVE = { scale: 103.1668, decay: 0.04354, shift: 3.1669 };
+
+// Most share of the solve a step may lose for each name, using chess.com's move class limits
+const CLASSES = [[0, "Best"], [2, "Excellent"], [5, "Good"], [10, "Inaccuracy"], [20, "Mistake"], [Infinity, "Blunder"]];
+
+// A step's accuracy from the share of the solve it lost: 0% lost = 100, 5% ≈ 80, 10% ≈ 64, 20% ≈ 39
+function accuracyFrom(share) {
+  return Math.min(100, Math.max(0, CURVE.scale * Math.exp(-CURVE.decay * share) - CURVE.shift));
+}
+
+// Effort from these moves until a step's goal holds, following a line of moves (0 when the goal already holds)
+function effortTo(scramble, moves, plain, line, methodSteps, target) {
+  const { pick } = enginePick(scramble, plain, { steps: [{ name: "", solution: line }] }, methodSteps, target, moves.length === 0);
+  return restFigures(pick, moves.join(" ")).speed;
+}
+
+// Your answer's place among the answers the engine compared at this spot: { place (0 = not listed), of, gap (effort behind its best) }, or null with no list
+function rankOf(step, run) {
+  // A review rebuilt from saved runs keeps only your own answer's place, which holds while your moves are the same
+  if (run.savedRank?.text === step.yours.text) return run.savedRank;
+  // The answers belong to the run's first row that turns something
+  const first = run.steps.findIndex((row) => row.moves > 0);
+  const ranked = run.steps[first]?.lookahead?.ranked;
+  if (!ranked?.length) return null;
+  // Rows before it can only rotate the cube, and the answers are named in that grip
+  const lead = run.steps.slice(0, first).map((row) => row.wide ?? row.solution.toString()).filter(Boolean).join(" ");
+  // Compared as plain turns, so r and Rw count as the same move
+  const asPlain = (text) => words(text).map(plainMove).join(" ");
+  const at = ranked.findIndex((answer) => asPlain(joinText(lead, answer.moves)) === asPlain(step.yours.text));
+  return { place: at + 1, of: ranked.length, gap: at < 0 ? null : ranked[at].total - ranked[0].total };
+}
+
+// How far each step you made moves in fell behind the engine, judged as the method judges its answers: the step plus the steps its lookahead counts
+function addAccuracy(scramble, steps, moves, plain, methodSteps, usedRuns) {
+  // The engine's whole solve, which each step's loss is a share of
+  const engineEffort = steps[0].fromHere.speed || 1;
+  steps.forEach((step, index) => {
+    if (!rated(step)) return;
+    // The last step this one is judged up to: itself with no lookahead, never past the method's end
+    const target = Math.min(index + (methodSteps[index].lookahead ?? 0), methodSteps.length - 1);
+    // The engine's way on from the end of your step (nothing after the last step)
+    const next = steps[index + 1];
+    const yourRest = next ? effortTo(scramble, moves.slice(0, step.end), plain.slice(0, step.end), next.fromHere.text, methodSteps, target) : 0;
+    // The engine's way on after its own pick
+    const pickMoves = words(step.engine.text);
+    const pickRest = effortTo(scramble, [...moves.slice(0, step.start), ...pickMoves], [...plain.slice(0, step.start), ...pickMoves.map(plainMove)], step.engineRest.text, methodSteps, target);
+    // Your way against the engine's, below 0 = better; the engine's exact moves lose nothing
+    const estimate = step.yours.text === step.engine.text ? 0 : step.yours.speed + yourRest - (step.engine.speed + pickRest);
+    const rank = rankOf(step, usedRuns.get(step.start));
+    // A listed answer uses the engine's own gap, since that's the ranking it picked by
+    const lost = rank?.place ? rank.gap : estimate;
+    // As a share of the engine's whole solve, so it means the same in a short method and a long one
+    const share = (100 * Math.max(0, lost)) / engineEffort;
+    step.accuracy = { lost, share, percent: accuracyFrom(share), label: CLASSES.find(([limit]) => share <= limit)[1], rank };
+  });
+}
+
+// The whole solve's accuracy: the mean and the harmonic mean averaged, so one big mistake shows, as lichess does without its weighting (null = no step to rate)
+function solveAccuracy(steps) {
+  if (!steps.length) return null;
+  const percents = steps.map((step) => step.accuracy.percent);
+  const harmonic = percents.length / sum(percents.map((percent) => 1 / Math.max(percent, 1)));
+  return (mean(percents) + harmonic) / 2;
+}
+
 // ============ REVIEW ============
 // Review a typed solution against a method: per step, your moves (with where they are in your solution) and the engine's pick from the same spot,
 // and the engine's whole way on from there (onProgress hears which engine run is going, of how many, the step it starts from, and that run's live progress);
@@ -536,8 +603,12 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
       fromHere: methodFigures(run, before === ""),
     });
   }
+  
   // What each step leaves for the rest of the solve, and the later steps it solved too
   addLookahead(steps, ends, moves);
+  // How close each step came to the engine's best
+  addAccuracy(scramble, steps, moves, plain, method.steps, usedRuns);
+
   // The engine's way on from your last move, when your solution stops partway through a step
   let fromYourEnd = null;
   if (unfinishedTail) {
@@ -665,6 +736,8 @@ export function scoreEvaluation(evaluation, time = null) {
     // Steps that set up the rest, and the later steps your moves solved along the way
     setups: steps.filter((step) => setupSign(step) > 0).length,
     alsoSolved: sum(steps.map((step) => step.alsoSolved.length)),
+    // How close the whole solve came to the engine's best, from 0 to 100
+    accuracy: solveAccuracy(steps),
   };
   // No time (or nothing turned): no pace figures
   if (!(time > 0) || !(evaluation.yours.speed > 0)) return { rating, pace: null };

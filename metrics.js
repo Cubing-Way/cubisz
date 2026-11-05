@@ -2,7 +2,7 @@
 import { scoreEvaluation, rated } from "./evaluate.js";
 
 // This format's version, kept with the metrics, so statistics can tell solves reviewed under an older one apart
-const METRICS_VERSION = 1;
+const METRICS_VERSION = 2;
 
 // A figure to 2 decimals (no figure stays null)
 function round(value) {
@@ -23,7 +23,18 @@ function stepMetrics(step) {
     netEffort: rated(step) ? round(step.net.speed) : null,
     // The step whose moves finished this one too (an OLL skip, say)
     solvedBy: step.solvedBy ?? null,
+    // How close this step came to the engine's best, from 0 to 100, and its class ("Best" to "Blunder"), for steps you made moves in
+    accuracy: rated(step) ? round(step.accuracy.percent) : null,
+    accuracyClass: rated(step) ? step.accuracy.label : null,
+    // Your answer's place among those the engine compared (0 = not among them, null = no list)
+    place: rated(step) ? (step.accuracy.rank?.place ?? null) : null,
   };
+}
+
+// Your answer's place at a spot in the solve, kept instead of the whole list, so a rebuilt review scores the same (null = no step of yours rated there)
+function savedRank(evaluation, at) {
+  const step = evaluation.steps.find((one) => one.start === at && rated(one));
+  return step?.accuracy.rank ? { ...step.accuracy.rank, text: step.yours.text } : null;
 }
 
 // The engine runs a review used, keeping only what a review reads of them, so the same review can be rebuilt later without the engine (seedRuns in evaluate.js)
@@ -34,6 +45,7 @@ function savedRuns(evaluation) {
     starts: run.starts,
     text: run.wide ?? run.solution,
     rows: run.steps.map((step) => step.wide ?? step.solution.toString()),
+    rank: savedRank(evaluation, at),
   }));
 }
 
@@ -48,6 +60,8 @@ export function solveMetrics(evaluation, time = null) {
     moves: evaluation.yours.moves,
     effort: round(evaluation.yours.speed),
     regrips: evaluation.yours.fingering?.regrips ?? null,
+    // How close the whole solve came to the engine's best, from 0 to 100
+    accuracy: round(rating.accuracy),
     // Per step against the engine's picks: its pick over yours (1 = as good as the engine, above = better), averaged over the steps you made moves in
     moveScore: round(rating.moves),
     effortScore: round(rating.speed),

@@ -4,6 +4,7 @@ A solve review app for the 3x3 (and a 2x2 viewer) in the browser. Paste a scramb
 
 - plays your solution on a 3D cube (or a flat net), with a timeline that splits it into the method's steps as you type;
 - reviews it: each step is compared with the engine's pick for that step from the same cube, with a verdict that also counts what the step left for the next ones, and your solve time turned into seconds at your own pace;
+- scores how close the solve came to the engine's best, each step and the whole solve, like chess.com's accuracy;
 - shows a suggested fingertrick under every move (which hand and finger, and the regrips);
 - solves a single step (or the rest of the solve) from any point of your solution, to show on the cube or add to your solution.
 
@@ -24,6 +25,17 @@ Player keys (outside the text boxes): ← → a move, Shift+← → a step, Home
 
 A solve can also arrive in the page's address, after the `#`: `#scramble=…&solution=…&time=…&method=…&runs=…` (Pro Timer's "Full analysis on Cubisz" link). `loadSolveFromLink` (`main.js`) fills the boxes and the method picker. `runs` holds the engine runs of a review already made, as `metrics.js` saves them: `seedRuns` (`evaluate.js`) puts them in the run cache, and the review that follows finds them there, so it calls no engine. Only the engine runs need the engine; the rest of a review (the steps, effort, fingertricks, comparisons) is worked out from them in about 100 ms. So opening, reloading or sharing that address costs nothing, and gives the same review, byte for byte. Anything further that needs a new run, like the step solver from another point, goes to the engine as usual.
 
+## Accuracy
+
+The Accuracy tile says how close your step choices came to the engine's best, like chess.com's accuracy, judged by the method you picked. It's worked out from the engine runs a review already has, so it adds no engine call.
+
+1. **The ranking**: when a step looks ahead, the engine compares several answers (up to 16 with CFOP level 3), and its run keeps them in `lookahead.ranked`, its pick first (see *Lookahead* in puzzly's README). A step with no lookahead has no list.
+2. **Your place**: `rankOf` (`evaluate.js`) looks for your moves in the list of the run that starts where your step starts, compared as plain turns so `r` and `Rw` match. It gives your place, the list's size and the effort behind the engine's best.
+3. **Effort lost**: `addAccuracy` uses that gap when your answer is listed, since it's what the engine picked by. When it isn't, it estimates: your step plus the engine's way on from its end, against the engine's pick plus its way on (`effortTo`), both up to as many steps ahead as the method's `lookahead`. So a slower pair that sets up the next one isn't punished, and last-layer luck further on doesn't count, unlike the `net` behind a step's verdict, so the two can disagree. The engine's exact moves lose nothing, and a step that beats the engine counts as losing nothing too.
+4. **The percentage**: effort lost over the engine's whole solve gives the share of the solve lost, and `accuracyFrom` turns that into a percentage with Lichess's accuracy curve (`CURVE`), since chess.com's formula isn't public: 0% lost = 100, 5% ≈ 80, 10% ≈ 64, 20% ≈ 39. `CLASSES` names the share with chess.com's move class limits: Best, Excellent, Good, Inaccuracy, Mistake or Blunder.
+5. **The whole solve**: `solveAccuracy` averages the mean and the harmonic mean of the steps you made moves in, so one big mistake shows, and `scoreEvaluation` puts it in the rating.
+6. **Showing and keeping it**: `review.js` draws the tile, each step card's "96% · 2nd best" pill (its class name when your answer isn't listed) and a row in its Numbers; `accuracyTone` tints the tile and the pills by the percent shown: green from 80%, amber from 50%, red below. `metrics.js` gives apps the figures, and saves your place with each run (`savedRank`) instead of the whole list, so a review rebuilt from saved runs (`seedRuns`) scores the same. If the moves change after that, the saved place no longer applies and the step uses the estimate.
+
 ## Engine for other apps
 
 Other apps can send a solve and get its metrics back without showing this site: `engine.html` is a page with nothing to see, which an app loads in a hidden iframe. Pro Timer uses it.
@@ -37,12 +49,13 @@ Only the sites in `ALLOWED_SITES` (`engine.js`) can ask. `engine.js` only passes
 
 These reviews go to the solve server first, like the site's. A 7-step solve is 7 calls: measured on 2026-11-02, about 11 s and 25 GB-seconds, or 18 s and 42 GB-seconds when a new container has to start and build its tables. So the server's budget covers roughly 80 to 130 reviews a month, shared with the site. When the server can't answer (its budget is spent, it's busy, or it can't be reached), they solve on the device instead, as the site does: about 40 seconds on a 4-thread PC, a bit more the first time, when the tables are built and stored. The metrics come out the same either way. A review with `deviceOnly` goes straight to the device: `engine-worker.js` passes it to `evaluateSolution`, which passes it through `cachedRun` to `newProgress`, where it leaves the run's `remote` false, so `solveMethod` never calls the server. An app reviewing many solves at once must use it, since about 100 reviews would spend the whole month's budget.
 
-`metrics.js` turns a review (185 KB) into the metrics (about 3 KB with CFOP level 3, 1.9 KB of it the engine runs), small enough to keep with every solve:
+`metrics.js` turns a review (185 KB) into the metrics (about 4 KB with CFOP level 3, about 2.5 KB of it the engine runs), small enough to keep with every solve:
 
 | Field | What it is |
 | --- | --- |
 | `version` | This format's version, raised when the fields change |
 | `method`, `complete` | The method's full name, and whether the solution finishes every step |
+| `accuracy` | How close the whole solve came to the engine's best, from 0 to 100 (null = no step to rate; see *Accuracy*) |
 | `moves`, `effort`, `regrips` | Your whole solution: moves, effort and hand regrips |
 | `moveScore`, `effortScore` | The engine's pick over yours, averaged over the steps you made moves in: 1 = as good as the engine, above = better |
 | `netMoves`, `netEffort` | Your steps against the engine's picks, counting what each step left for the rest: below 0 = better |
@@ -52,8 +65,8 @@ These reviews go to the solve server first, like the site's. A 7-step solve is 7
 | `time`, `tps`, `execution` | Your time, moves per second, effort per second (null with no time, like the two below) |
 | `engineTime` | The engine's own solve at your execution |
 | `netTime`, `choicesTime` | `netEffort` and `stepEffort` as seconds at your execution |
-| `steps` | Each step: `name`, `moves`, `effort`, `engineMoves`, `engineEffort`, `netMoves`, `netEffort`, `solvedBy` (the step whose moves finished this one too) |
-| `runs` | The review's engine runs, one per place a step starts: `at` (your moves before it), `moves`, `starts`, `text` (the whole run) and `rows` (each step's moves). They rebuild the review with no engine call (see above) |
+| `steps` | Each step: `name`, `moves`, `effort`, `engineMoves`, `engineEffort`, `netMoves`, `netEffort`, `solvedBy` (the step whose moves finished this one too), `accuracy`, `accuracyClass` ("Best" to "Blunder") and `place` (among the answers the engine compared: 0 = not among them, null = no list) |
+| `runs` | The review's engine runs, one per place a step starts: `at` (your moves before it), `moves`, `starts`, `text` (the whole run), `rows` (each step's moves) and `rank` (your answer's place there, for accuracy). They rebuild the review with no engine call (see above) |
 
 ## Run
 
@@ -92,7 +105,7 @@ The site lands in `dist/` as static files, with relative paths so it works from 
 | `index.html` | The page, and Vite's entry |
 | `main.js` | Wires the page: your solve's inputs, the method picker, the tabs, the review and the step solver; `loadSolveFromLink` fills them from a solve sent in the address |
 | `player.js` | The cube player: step timeline, play and move buttons, keys, the move readout, and previews of the engine's moves |
-| `evaluate.js` | The review engine: splits a solution into the method's steps, compares each with the engine's pick, solves single steps; caches engine runs |
+| `evaluate.js` | The review engine: splits a solution into the method's steps, compares each with the engine's pick, works out accuracy, solves single steps; caches engine runs |
 | `review.js` | Draws the review, the step solver's answer, and moves as chips with their fingertricks |
 | `engine.html`, `engine.js` | The hidden engine page other apps load in an iframe, and what lists the methods and passes their messages to and from the worker |
 | `engine-worker.js` | Takes a solve, reviews it (on the solve server, or the device when the server can't answer), and answers with its metrics |
