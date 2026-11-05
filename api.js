@@ -1,6 +1,6 @@
 // api.js
 import { cloneCubeState, restoreCubeState, isSolved, selectPuzzle } from "./puzzles/cube.js";
-import { printScrambleMoves, getMoveCount, isFMC, setFMC } from "./scramble.js";
+import { printScrambleMoves, getMoveCount } from "./scramble.js";
 import { mountRenderer, paintCube, resize, set3D } from "./renderer.js";
 let scrambledState = null;
 
@@ -50,6 +50,5 @@ export {
   applySolution, 
   getLastMoveCount, 
   checkSolved, 
-  setFMC, 
   puzzleSelect
 }

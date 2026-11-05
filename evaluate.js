@@ -4,6 +4,7 @@ import {
   engineReady,
   readMethod,
   runMethod,
+  searchMethod,
   beamSearchMethod,
   reachesGoal,
   gripRotations,
@@ -19,7 +20,7 @@ import {
   RemoteEngineError,
 } from "./puzzly.js";
 // How the engine solves with a method: Search fastest keeping this many, or a plain run (0), and whether it goes to the solve server
-import { keepingFor, onServer, reviewable } from "./method.js";
+import { keepingFor, onServer, reviewable, isFmc, FMC_BUDGET_MS } from "./method.js";
 
 // ============ METHODS ============
 // Methods read (checked) once each, by their data object
@@ -55,6 +56,9 @@ function newProgress(method, deviceOnly = false) {
     method: method.name.replace(/\s*\(.*\)\s*$/, ""),
     steps: method.steps,
     keeping: keepingFor(method),
+    // FMC: puzzly's method search, and the fewest moves it has found so far (null = no run yet)
+    fmc: isFmc(method),
+    best: null,
     // On the solve server (no step-by-step progress comes back from it), or in the page because the server couldn't answer
     remote: onServer(method) && !deviceOnly && !serverOff && !pageOnly.has(method.name),
     fallback: false,
@@ -108,6 +112,11 @@ export function progressText(progress) {
   if (progress.remote) return `Solving on the server… ${time}`;
   // In the page after the server couldn't answer
   const here = progress.fallback ? "The server couldn't answer, solving here: " : "";
+  // FMC: the search's best run so far
+  if (progress.fmc) {
+    const state = progress.best === null ? "plain run first" : `best so far ${plural(progress.best, "move")}`;
+    return `${here}Searching for the fewest moves: ${state}… ${time}${progress.tableNote}`;
+  }
   // Search fastest: its plain run first, then the step it extends and how many partial solves
   if (progress.keeping) {
     const state = step ? `${where}, ${plural(progress.partials, "partial solve")}` : "plain run first";
@@ -156,6 +165,19 @@ async function solveMethod(scramble, method, done, progress) {
   }
   // Table builds and loads, for the live status
   const onProgress = tableListener(progress);
+  // FMC: puzzly's method search, the fewest moves it finds in its time; it starts from the plain run, so it never does worse
+  if (progress.fmc) {
+    const found = await searchMethod(scramble, method, {
+      done,
+      budgetMs: FMC_BUDGET_MS,
+      onProgress,
+      // Each shorter run, for the live status
+      onBetter: (run) => (progress.best = run.moves),
+    });
+    // No run got through every step
+    if (!found.best) throw new Error("no solve gets through every step.");
+    return found.best;
+  }
   // Plain run: each step its own pick, lookahead included
   if (!progress.keeping) {
     return runMethod(scramble, method, {
@@ -474,10 +496,10 @@ function addLookahead(steps, ends, moves) {
   });
 }
 
-// Whether a step's choice changed what's left by enough to say so: +1 = it set up the rest, -1 = it left the rest harder, 0 = neither
-export function setupSign(step) {
-  if (!step.setup || Math.abs(step.setup.speed) < SETUP_MIN) return 0;
-  return Math.sign(step.setup.speed);
+// Whether a step's choice changed what's left by enough to say so, in the figure the review judges by: +1 = it set up the rest, -1 = it left the rest harder, 0 = neither
+export function setupSign(step, judged = "speed") {
+  if (!step.setup || Math.abs(step.setup[judged]) < SETUP_MIN) return 0;
+  return Math.sign(step.setup[judged]);
 }
 
 // ============ ACCURACY ============
@@ -515,9 +537,9 @@ function rankOf(step, run) {
 }
 
 // How far each step you made moves in fell behind the engine, judged as the method judges its answers: the step plus the steps its lookahead counts
-function addAccuracy(scramble, steps, moves, plain, methodSteps, usedRuns) {
-  // The engine's whole solve, which each step's loss is a share of
-  const engineEffort = steps[0].fromHere.speed || 1;
+function addAccuracy(scramble, steps, moves, plain, methodSteps, usedRuns, judged) {
+  // The engine's whole solve, in the figure the review judges by, which each step's loss is a share of
+  const engineTotal = steps[0].fromHere[judged] || 1;
   steps.forEach((step, index) => {
     if (!rated(step)) return;
     // The last step this one is judged up to: itself with no lookahead, never past the method's end
@@ -531,10 +553,10 @@ function addAccuracy(scramble, steps, moves, plain, methodSteps, usedRuns) {
     // Your way against the engine's, below 0 = better; the engine's exact moves lose nothing
     const estimate = step.yours.text === step.engine.text ? 0 : step.yours.speed + yourRest - (step.engine.speed + pickRest);
     const rank = rankOf(step, usedRuns.get(step.start));
-    // A listed answer uses the engine's own gap, since that's the ranking it picked by
-    const lost = rank?.place ? rank.gap : estimate;
+    // FMC counts the whole solve your step leads to against the engine's from the same spot; otherwise a listed answer uses the engine's own gap, since that's the ranking it picked by
+    const lost = judged === "moves" ? step.net.moves : rank?.place ? rank.gap : estimate;
     // As a share of the engine's whole solve, so it means the same in a short method and a long one
-    const share = (100 * Math.max(0, lost)) / engineEffort;
+    const share = (100 * Math.max(0, lost)) / engineTotal;
     step.accuracy = { lost, share, percent: accuracyFrom(share), label: CLASSES.find(([limit]) => share <= limit)[1], rank };
   });
 }
@@ -555,6 +577,8 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
   await engineReady;
   if (!reviewable(methodData)) throw new Error("this method has BLD or repeated steps, which don't map onto one stretch of a solution.");
   const method = methodOf(methodData);
+  // What this review judges by: moves with FMC, effort otherwise
+  const judged = isFmc(method) ? "moves" : "speed";
   // Your moves as typed (scored and shown as you wrote them), and as plain face turns and rotations (what the engine starts from)
   const moves = words(solution);
   const plain = moves.map(plainMove);
@@ -607,7 +631,7 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
   // What each step leaves for the rest of the solve, and the later steps it solved too
   addLookahead(steps, ends, moves);
   // How close each step came to the engine's best
-  addAccuracy(scramble, steps, moves, plain, method.steps, usedRuns);
+  addAccuracy(scramble, steps, moves, plain, method.steps, usedRuns, judged);
 
   // The engine's way on from your last move, when your solution stops partway through a step
   let fromYourEnd = null;
@@ -623,6 +647,7 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
   const engine = steps[0].fromHere;
   return {
     method: method.name,
+    judged,
     // The method's steps, for splitting engine lines into them (see engineLine)
     methodSteps: method.steps,
     scramble,
@@ -734,7 +759,7 @@ export function scoreEvaluation(evaluation, time = null) {
     netSpeed: sum(steps.map((step) => step.net.speed)),
     stepSpeed: sum(steps.map((step) => step.yours.speed - step.engine.speed)),
     // Steps that set up the rest, and the later steps your moves solved along the way
-    setups: steps.filter((step) => setupSign(step) > 0).length,
+    setups: steps.filter((step) => setupSign(step, evaluation.judged) > 0).length,
     alsoSolved: sum(steps.map((step) => step.alsoSolved.length)),
     // How close the whole solve came to the engine's best, from 0 to 100
     accuracy: solveAccuracy(steps),

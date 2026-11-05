@@ -2,15 +2,6 @@ import { resetCube, U, D, R, L, F, B, M, E, S, y, x, z } from "./puzzles/cube.js
 
 let scramble = '';
 let _moveCount = 0;
-let _isFMC = false;
-
-function isFMC() {
-  return _isFMC;
-}
-
-function setFMC(value) {
-  _isFMC = Boolean(value);
-}
 
 function genRanState() {
   const moves1 = ['U', 'D'];
@@ -120,7 +111,6 @@ function printScrambleMoves(scr, shouldReset = true) {
   _moveCount = 0;
 
   moves.forEach(move => {
-    if (_isFMC && ["M", "M'", "M2", "E", "E'", "E2", "S", "S'", "S2"].includes(move)) return;
     const func = moveFunctions[move];
     if (func) {
       func();
@@ -134,7 +124,5 @@ export {
   scramble,
   getMoveCount,
   genRanState,
-  printScrambleMoves,
-  isFMC,
-  setFMC
+  printScrambleMoves
 };

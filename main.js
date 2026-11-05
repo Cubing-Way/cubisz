@@ -1,11 +1,11 @@
 // cubisz page wiring: your solve (scramble, solution, time, method), the cube player, the review and the step solver
-import { mountCube, setSize, setView, applyScramble, setFMC, puzzleSelect } from "./api.js";
+import { mountCube, setSize, setView, applyScramble, puzzleSelect } from "./api.js";
 import { genRanState, scramble } from "./scramble.js";
 
 // puzzly engine: random-state scrambles, and the fingering the player's readout shows
 import { engineReady, randomScramble, fingering } from "./puzzly.js";
 // Every method, the one the picker starts on, and which ones search (slow)
-import { METHODS, METHOD, keepingFor, reviewable } from "./method.js";
+import { METHODS, METHOD, keepingFor, reviewable, fmcMethod, isFmc } from "./method.js";
 // The review and step solver engine: reviews, live step splits, single steps, and their live progress
 import { evaluateSolution, seedRuns, prefetchRun, progressText, progressSummary, splitSolution, stepsDoneAt, solveFrom, solveProgress, words, cleanMoves, plural, engineLine } from "./evaluate.js";
 // Drawing reviews, the step solver's answers, notices and move chips
@@ -160,17 +160,19 @@ methodSelector.replaceChildren(
   }),
 );
 
-// The method picked
+// The method picked, in its FMC version while the FMC switch is on
 function currentMethod() {
-  return PICKABLE[methodSelector.value] ?? METHOD;
+  const picked = PICKABLE[methodSelector.value] ?? METHOD;
+  return fmcToggle.checked ? fmcMethod(picked) : picked;
 }
 
 // The picked method's note under the pickers, and the slow warning beside its label
 function showMethodNote() {
   const method = currentMethod();
-  const slow = keepingFor(method) > 0;
+  // What makes this method slow: the search for the fewest moves, the search for the fastest solve, or nothing
+  const slow = isFmc(method) ? "Searches for the fewest moves: a review takes a minute or two." : keepingFor(method) > 0 ? "Searches for the fastest solve: a review can take minutes." : "";
   methodSlow.hidden = !slow;
-  methodNoteLine.textContent = [methodNote(method.name), slow ? "Searches for the fastest solve: a review can take minutes." : ""].filter(Boolean).join(" · ");
+  methodNoteLine.textContent = [methodNote(method.name), slow].filter(Boolean).join(" · ");
 }
 
 // Note for busy texts while a slow method solves, "" for every other method
@@ -449,15 +451,8 @@ solveInput.addEventListener("input", () => {
 // New button: a new random scramble
 document.getElementById("scramble-btn").addEventListener("click", () => newRandomScramble());
 
-// FMC switch: scramble applied again under the new rules, with the solution on top
-fmcToggle.addEventListener("change", (e) => {
-  setFMC(e.target.checked);
-  applyCurrentScramble();
-  refreshSolve({ keepPosition: true });
-});
-
-// Another method: its note, the steps found again, the step solver's picker rebuilt, the review marked out of date
-methodSelector.addEventListener("change", () => {
+// Another method, or the FMC switch (which swaps the method for its FMC version): its note, the steps found again, the step solver's picker rebuilt, the review marked out of date
+function methodChanged() {
   showMethodNote();
   solverPicked = null;
   solverMethod = null;
@@ -465,7 +460,9 @@ methodSelector.addEventListener("change", () => {
   markStale();
   updateSolver();
   if (canAnalyze() && currentScramble && solutionMoves.length) prefetchRun(currentScramble, currentMethod());
-});
+}
+methodSelector.addEventListener("change", methodChanged);
+fmcToggle.addEventListener("change", methodChanged);
 
 // ============ TABS ============
 // Shows one tab's panel (review or solver) and remembers it

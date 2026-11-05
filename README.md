@@ -10,11 +10,11 @@ A solve review app for the 3x3 (and a 2x2 viewer) in the browser. Paste a scramb
 
 Solving, scrambles, fingerings and move tools come from the [puzzly](https://github.com/Cubing-Way/puzzly) engine.
 
-Engine runs go to puzzly's solve server on AWS (see *Solve server* in puzzly's README), so the page builds no tables for them, except the "Computer fastest" methods: Search fastest takes minutes a run, past the server's 120 s a request, so those solve in the page. When the server can't answer a run (it's busy or too slow, its month's budget is spent, or it can't be reached), the page solves it instead, and keeps solving that method in the page for the rest of the visit (every method, once the budget is spent or the server can't be reached).
+Engine runs go to puzzly's solve server on AWS (see *Solve server* in puzzly's README), so the page builds no tables for them, except the "Computer fastest" methods: Search fastest takes minutes a run, past the server's 120 s a request, so those solve in the page, and FMC mode, whose search always uses all its time. When the server can't answer a run (it's busy or too slow, its month's budget is spent, or it can't be reached), the page solves it instead, and keeps solving that method in the page for the rest of the visit (every method, once the budget is spent or the server can't be reached).
 
 ## Using it
 
-1. **Scramble**: paste yours, or press New for a random one. FMC makes the cube ignore slice moves.
+1. **Scramble**: paste yours, or press New for a random one. The FMC switch beside it makes the engine search for the fewest moves instead of the fastest solve (see *FMC mode*).
 2. **Your solution**: type or paste it; `//` comments and line breaks are fine. The note beside the box says whether it solves the cube.
 3. **Review my solve** (with the method picked, and your time if you want seconds): the Review tab shows a summary and stats, then the steps, following one of two solves (the Follow switch right above them). **Your solve**: each of your steps against the engine's pick from the same cube. **Engine's solve**: the cube plays the engine's own solve from the scramble (or, after "Branch here" on a step, your moves up to that step, then the engine solving your cube, marked where it branches), with a race of the two solves (split into the same steps, by moves or time) and each engine step shown over your step for the same goal, with the race totals after each. Click a step to see the cube there, Play to watch your step, Show on cube to watch the engine's; each card's Numbers fold out the step's detailed figures.
 4. **Step solver** tab: move the timeline to any point, pick a step (the next one is picked for you) and press Find moves; then show it on the cube, or add the moves to your solution.
@@ -35,6 +35,18 @@ The Accuracy tile says how close your step choices came to the engine's best, li
 4. **The percentage**: effort lost over the engine's whole solve gives the share of the solve lost, and `accuracyFrom` turns that into a percentage with Lichess's accuracy curve (`CURVE`), since chess.com's formula isn't public: 0% lost = 100, 5% ≈ 80, 10% ≈ 64, 20% ≈ 39. `CLASSES` names the share with chess.com's move class limits: Best, Excellent, Good, Inaccuracy, Mistake or Blunder.
 5. **The whole solve**: `solveAccuracy` averages the mean and the harmonic mean of the steps you made moves in, so one big mistake shows, and `scoreEvaluation` puts it in the rating.
 6. **Showing and keeping it**: `review.js` draws the tile, each step card's "96% · 2nd best" pill (its class name when your answer isn't listed) and a row in its Numbers; `accuracyTone` tints the tile and the pills by the percent shown: green from 80%, amber from 50%, red below. `metrics.js` gives apps the figures, and saves your place with each run (`savedRank`) instead of the whole list, so a review rebuilt from saved runs (`seedRuns`) scores the same. If the moves change after that, the saved place no longer applies and the step uses the estimate.
+
+## FMC mode
+
+The FMC switch makes the engine look for the fewest moves instead of the fastest solve, using puzzly's method search (*Method search* in puzzly's README). Your solution, the cube and how it's split into steps stay the same; only the engine's runs and what a review judges by change.
+
+1. **The method**: `currentMethod` (`main.js`) gives `fmcMethod(picked)` while the switch is on. `fmcMethod` (`method.js`) makes the method's FMC version once per method: the same goals, with each step ranked by moves and no lookahead, extra moves or avoided faces, since those only help a solve turn fast. With them, the plain run the search starts from can use up its whole time. Its name starts with `FMC: `, which gives it its own cached runs, marks a review out of date when the switch changes, and shows in the review's title. `isFmc` reads that name. So the rest of the page treats the switch as picking another method, and both share `methodChanged`.
+2. **The search**: `solveMethod` (`evaluate.js`) calls `searchMethod` for up to `FMC_BUDGET_MS` (10 s) a run. It starts from the plain run, then keeps the shortest run it finds, and `onBetter` passes each one to the live status. A run can go over its time, up to 17 s in tests, since the search only checks the clock between requests to its worker. Measured on 2026-11-05 with CFOP level 3 from the scramble on a 4-thread PC: plain runs of 52, 55 and 51 moves came to 33, 46 and 46. 20 s only beat 10 s in 2 of 10 comparisons across four methods. A method search is bound by the method's steps, so it isn't a true fewest-moves solver, and a slice turn counts as one move, as the engine counts it.
+3. **Where it runs**: always on the device (`onServer` in `method.js`). A search uses all its time on every run, so about 17 FMC reviews would spend the solve server's whole month. A 7-run review takes about a minute. The first one on a device takes a bit longer, and its first run has little time left to search, because the tables are built then.
+4. **What's judged**: `evaluateSolution` sets `judged` to `"moves"` for an FMC version and `"speed"` otherwise, and keeps it in the review. It's also the key that reads the figure, as in `step.net[judged]`. `setupSign` counts set-ups in it. `addAccuracy` uses it for the engine's whole solve, and in FMC a step's loss is `step.net.moves`: your step plus the engine's way on from its end, against the engine's whole way from the same spot. So the ranking in `lookahead.ranked` isn't used (FMC versions have none), a step can beat the engine, and the percentage is the share of the engine's moves lost.
+5. **What's shown**: `renderReview` (`review.js`) keeps `judged` for the verdicts. `amount` writes "3 moves", `moreWord` and `lessWord` say longer and shorter instead of slower and faster, `overall` and `standing` count moves, and the stats show *Net moves* instead of *Net effort*. An FMC review also adds a line to its explainer. Effort still shows as a figure, but no verdict uses it.
+
+Other apps don't get FMC: `engine-worker.js` only finds methods by their plain names, so `engine.html` can't be asked for an FMC version.
 
 ## Engine for other apps
 
@@ -103,18 +115,18 @@ The site lands in `dist/` as static files, with relative paths so it works from 
 | Path | What's in it |
 | --- | --- |
 | `index.html` | The page, and Vite's entry |
-| `main.js` | Wires the page: your solve's inputs, the method picker, the tabs, the review and the step solver; `loadSolveFromLink` fills them from a solve sent in the address |
+| `main.js` | Wires the page: your solve's inputs, the method picker and FMC switch (`currentMethod`, `methodChanged`), the tabs, the review and the step solver; `loadSolveFromLink` fills them from a solve sent in the address |
 | `player.js` | The cube player: step timeline, play and move buttons, keys, the move readout, and previews of the engine's moves |
-| `evaluate.js` | The review engine: splits a solution into the method's steps, compares each with the engine's pick, works out accuracy, solves single steps; caches engine runs |
-| `review.js` | Draws the review, the step solver's answer, and moves as chips with their fingertricks |
+| `evaluate.js` | The review engine: splits a solution into the method's steps, compares each with the engine's pick, works out accuracy, solves single steps (with `searchMethod` in FMC mode); caches engine runs |
+| `review.js` | Draws the review (its verdicts in effort, or in moves with FMC), the step solver's answer, and moves as chips with their fingertricks |
 | `engine.html`, `engine.js` | The hidden engine page other apps load in an iframe, and what lists the methods and passes their messages to and from the worker |
 | `engine-worker.js` | Takes a solve, reviews it (on the solve server, or the device when the server can't answer), and answers with its metrics |
 | `metrics.js` | `solveMetrics`: a review as the compact metrics apps get back, with its engine runs (`savedRuns`) |
-| `method.js` | The methods the picker offers (`methods/*.json` first, then puzzly's examples), which ones search for the fastest solve, which go to the solve server, which can be reviewed (`reviewable`), and which apps can pick (`APP_METHODS`) |
+| `method.js` | The methods the picker offers (`methods/*.json` first, then puzzly's examples), which ones search for the fastest solve, each method's FMC version (`fmcMethod`, `isFmc`, `FMC_BUDGET_MS`), which go to the solve server, which can be reviewed (`reviewable`), and which apps can pick (`APP_METHODS`) |
 | `methods/` | Your own method files (puzzly's Export format) |
 | `api.js` | cubisz's cube API used by `main.js`: mount, size, view, scramble, solution |
 | `renderer.js` | Draws the cube net as SVG stickers, and the 3D view |
-| `scramble.js` | Random scrambles and move parsing (FMC mode included) |
+| `scramble.js` | Random scrambles and move parsing |
 | `puzzles/` | Cube models: `2x2.js`, `3x3.js`, and `cube.js`, which switches between them |
 | `puzzly.js` | Loads the puzzly engine with its search and scoring workers and the Rust speed model, connects to the solve server, and re-exports its API |
 | `puzzly-worker.js`, `puzzly-helper.js` | puzzly's search worker and its helpers for long searches, with the Rust search code |

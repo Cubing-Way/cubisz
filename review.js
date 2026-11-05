@@ -190,41 +190,60 @@ export function renderNotice(container, { title, text = "", tone = "", items = [
 }
 
 // ============ VERDICTS ============
-// Effort (or seconds) as words for a verdict: "0.42 s" with your pace, "1.3 effort" without
+// What the review on show judges by: "speed" (effort), or "moves" with FMC
+let judged = "speed";
+
+// Its word for more of what's judged: by effort a step is slower, by moves it's longer
+function moreWord() {
+  return judged === "moves" ? "longer" : "slower";
+}
+
+// Its word for less of what's judged: by effort a step is faster, by moves it's shorter
+function lessWord() {
+  return judged === "moves" ? "shorter" : "faster";
+}
+
+// A word with a capital first letter
+function capital(word) {
+  return word[0].toUpperCase() + word.slice(1);
+}
+
+// What's judged as words for a verdict: "3 moves" with FMC; else "0.42 s" with your pace, "1.3 effort" without
 function amount(value, pace) {
+  if (judged === "moves") return plural(Math.abs(value), "move");
   return pace ? `${Math.abs(value / pace.execution).toFixed(2)} s` : `${Math.abs(value).toFixed(1)} effort`;
 }
 
 // A step's verdict against the engine, counting what it left for the next steps: tone ("better", "even", "warn", "worse") and a short text
 function verdict(step, pace) {
   if (!rated(step)) return null;
-  const net = step.net.speed;
+  const net = step.net[judged];
   if (step.yours.text === step.engine.text) return { tone: "even", text: "Same as engine" };
   if (net <= -0.5) return { tone: "better", text: `Better · ${amount(net, pace)}` };
   if (net < 0.5) return { tone: "even", text: "On par" };
-  return { tone: net < 2.5 ? "warn" : "worse", text: `Slower · ${amount(net, pace)}` };
+  return { tone: net < 2.5 ? "warn" : "worse", text: `${capital(moreWord())} · ${amount(net, pace)}` };
 }
 
 // What the verdict counts beyond the step's own moves, in a sentence or two (lookahead: set-ups, harder rests, later steps solved too)
 function stepNote(step, pace) {
   const notes = [];
   if (step.alsoSolved.length) notes.push(`Your moves also finished ${list(step.alsoSolved)}.`);
-  const own = step.yours.speed - step.engine.speed;
-  const sign = setupSign(step);
+  const own = step.yours[judged] - step.engine[judged];
+  const sign = setupSign(step, judged);
   // Set the rest up: slower (or as fast) alone, better with what follows
-  if (sign > 0) notes.push(`On its own it's ${own > 0 ? `${amount(own, pace)} slower than` : "as fast as"} the engine's pick, but it leaves ${amount(step.setup.speed, pace)} less to do in the steps after.`);
+  if (sign > 0) notes.push(`On its own it's ${own > 0 ? `${amount(own, pace)} ${moreWord()} than` : `as ${judged === "moves" ? "short" : "fast"} as`} the engine's pick, but it leaves ${amount(step.setup[judged], pace)} less to do in the steps after.`);
   // Left the rest harder
-  if (sign < 0) notes.push(`${own < 0 ? `It's ${amount(own, pace)} faster on its own, but it` : "It"} leaves the steps after ${amount(step.setup.speed, pace)} harder than the engine's pick does.`);
+  if (sign < 0) notes.push(`${own < 0 ? `It's ${amount(own, pace)} ${lessWord()} on its own, but it` : "It"} leaves the steps after ${amount(step.setup[judged], pace)} ${judged === "moves" ? "longer" : "harder"} than the engine's pick does.`);
   return notes.join(" ");
 }
 
 // The verdict on all your step choices together: the summed net, as a headline and a tone
 function overall(rating, pace) {
   if (!rating.steps) return { tone: "", text: "—" };
-  const net = rating.netSpeed;
+  const net = judged === "moves" ? rating.netMoves : rating.netSpeed;
   if (Math.abs(net) < 0.5) return { tone: "even", text: "On par" };
-  if (net < 0) return { tone: "better", text: `${amount(net, pace)} faster` };
-  return { tone: net < 2.5 ? "warn" : "worse", text: `${amount(net, pace)} slower` };
+  if (net < 0) return { tone: "better", text: `${amount(net, pace)} ${lessWord()}` };
+  return { tone: net < 2.5 ? "warn" : "worse", text: `${amount(net, pace)} ${moreWord()}` };
 }
 
 // ============ REVIEW PARTS ============
@@ -305,7 +324,8 @@ function statsGrid(score, evaluation) {
     stat("Effort score", percent(rating.speed), "per step · engine = 100%", "The same for effort: above 100% = easier to turn than the engine's picks"),
     stat("Moves per step", none ? "—" : signed(rating.movesDiff, 1), "vs the engine's picks", "Your moves minus the engine's pick, averaged per step (below 0 = fewer)"),
     stat("Effort per step", none ? "—" : signed(rating.speedDiff, 1), "vs the engine's picks", "Your effort minus the engine's pick, averaged per step (below 0 = easier)"),
-    stat(
+    // FMC judges by moves, so its net is in moves
+    judged === "moves" ? stat("Net moves", none ? "—" : signed(rating.netMoves), "with what each step left", "All your steps against the engine's picks, counting what each left for the steps after it (0 = even, below = fewer moves)") : stat(
       "Net effort",
       none ? "—" : signed(rating.netSpeed, 1),
       pace ? `≈ ${signed(pace.netTime, 2)} s · steps alone ${signed(pace.choicesTime, 2)} s` : `steps alone ${signed(rating.stepSpeed, 1)}`,
@@ -446,7 +466,7 @@ function stepNumbers(step, pace, actions) {
       ["What it leaves vs the pick", step.after.moves ? `${signed(-step.setup.moves)} moves · ${signed(-step.setup.speed, 1)} effort` : "the cube solved"],
       ["Net, with what it leaves", `${signed(step.net.moves)} moves · ${signed(step.net.speed, 1)} effort${secs(step.net.speed)}`],
       ["Engine from here to the end", figures(step.fromHere)],
-      ["Accuracy", `${accuracyText(step.accuracy)} · ${Math.max(0, step.accuracy.lost).toFixed(1)} effort lost${step.accuracy.rank?.place ? ` · ${ordinal(step.accuracy.rank.place)} of the ${step.accuracy.rank.of} answers the engine compared` : ""}`],
+      ["Accuracy", `${accuracyText(step.accuracy)} · ${judged === "moves" ? plural(Math.max(0, step.accuracy.lost), "move") : `${Math.max(0, step.accuracy.lost).toFixed(1)} effort`} lost${step.accuracy.rank?.place ? ` · ${ordinal(step.accuracy.rank.place)} of the ${step.accuracy.rank.of} answers the engine compared` : ""}`],
     ]),
   );
   // The engine's whole way on from here, on the cube
@@ -517,15 +537,15 @@ function engineVerdict(theirs, mine, pace) {
   if (!theirs.moves && mine?.moves) return { tone: "warn", text: "Engine skipped it" };
   if (!theirs.moves) return null;
   if (mine.text === theirs.text) return { tone: "even", text: "Same moves as you" };
-  const diff = theirs.speed - mine.speed;
-  if (diff <= -0.5) return { tone: diff > -2.5 ? "warn" : "worse", text: `Faster than you · ${amount(diff, pace)}` };
+  const diff = theirs[judged] - mine[judged];
+  if (diff <= -0.5) return { tone: diff > -2.5 ? "warn" : "worse", text: `${capital(lessWord())} than you · ${amount(diff, pace)}` };
   if (diff < 0.5) return { tone: "even", text: "Even with you" };
-  return { tone: "better", text: `Slower than you · ${amount(diff, pace)}` };
+  return { tone: "better", text: `${capital(moreWord())} than you · ${amount(diff, pace)}` };
 }
 
 // Where the race stands after a step: both move totals so far, and who's ahead by effort (time with your pace)
 function standing(name, totals, pace) {
-  const gap = totals.yoursSpeed - totals.engineSpeed;
+  const gap = judged === "moves" ? totals.yoursMoves - totals.engineMoves : totals.yoursSpeed - totals.engineSpeed;
   const lead = Math.abs(gap) < 0.5 ? "level" : gap < 0 ? `you're ${amount(gap, pace)} ahead` : `the engine is ${amount(gap, pace)} ahead`;
   return `After ${name}: engine ${plural(totals.engineMoves, "move")}, you ${plural(totals.yoursMoves, "move")} · ${lead}`;
 }
@@ -631,6 +651,8 @@ function explainer() {
   details.append(el("summary", "", "How to read this review"));
   const items = el("ul");
   for (const text of [
+    // Only in an FMC review
+    ...(judged === "moves" ? ["FMC: the engine searches for the fewest moves it can find with this method (about 10 s from each spot, so it may not be the very fewest). Verdicts and accuracy count moves here, not effort. A slice turn counts as one move, as the engine counts it."] : []),
     "Effort is how hard moves are to turn, counted in easy turns: an R or a U flick is 1; regrips, awkward grips and slow layers (D, B) cost more. Lower is faster. With your solve time, effort turns into seconds at your own pace.",
     "Follow your solve: each of your steps against the engine's pick from the exact cube your moves left, with the same method. Its verdict also counts what the step left for the steps after it, so a slower pair that skips OLL can still come out ahead.",
     "Follow the engine's solve: the cube plays the engine's own solve from the scramble, and each of its steps is shown with your step for the same goal under it (from your cube, so the cases differ), like a race; the totals after each step say who's ahead.",
@@ -667,6 +689,8 @@ function branchPoints(evaluation) {
 // engineStep(index), playEngineStep(index), playEngine(), showFromEnd(moves), addFromEnd(moves), follow / setFollow(mode) for what's followed
 // ("you" or "engine"), and branch / setBranch(index) for where the engine's line starts (0 = the scramble, else the start of your step index)
 export function renderReview(container, evaluation, time, actions) {
+  // What this review's verdicts count: moves with FMC, effort otherwise
+  judged = evaluation.judged;
   const score = scoreEvaluation(evaluation, time);
   const { rating, pace } = score;
   const review = el("div", "review");
