@@ -130,9 +130,9 @@ export async function seedRuns(scramble, solution, methodData, runsText) {
   await engineReady;
   const method = methodOf(methodData);
   const plain = words(solution).map(plainMove);
-  JSON.parse(runsText).forEach(({ at, moves, starts, text, rows, rank }) => {
-    // Only what a review reads of a run, with your answer's place for accuracy; each step's name comes from the method
-    const run = { solution: text, moves, starts, savedRank: rank ?? null, steps: rows.map((row, index) => ({ name: method.steps[index].name, solution: row })) };
+  JSON.parse(runsText).forEach(({ at, moves, starts, text, rows, rank, options }) => {
+    // Only what a review reads of a run, with your answer's place for accuracy and the scramble's option lists; each step's name comes from the method
+    const run = { solution: text, moves, starts, savedRank: rank ?? null, savedOptions: options ?? null, steps: rows.map((row, index) => ({ name: method.steps[index].name, solution: row })) };
     runCache.set(runKey(scramble, method, plain.slice(0, at).join(" ")), { run: Promise.resolve(run), progress: { ...newProgress(method), remote: false, ms: 0 } });
   });
 }
@@ -558,6 +558,53 @@ function solveAccuracy(steps) {
   return (mean(percents) + harmonic) / 2;
 }
 
+// ============ SCRAMBLE SCORE ============
+// Chance a solver spots each answer the engine compared at a step (they take the cheapest one they spotted): lower = finding the good ones counts for more
+const SPOT = 1 / 3;
+
+// Likely cost at which the score halves: 100 at 0, 50 at 60 effort (or moves with FMC), 25 at 120
+const HALF = 60;
+
+// Most share above a step's best total that still counts as a good option: 10%
+const GOOD = 0.1;
+
+// The answers the engine compared at each step of a run, as lists of totals in the figure the review judges by (a step ranked by the other figure is left out)
+function optionLists(run, judged) {
+  // A run rebuilt from saved runs keeps its lists (see metrics.js)
+  if (run.savedOptions) return run.savedOptions;
+  return run.steps
+    .filter((row) => row.lookahead?.ranked?.length && (row.lookahead.rank ?? "moves") === judged)
+    .map((row) => row.lookahead.ranked.map((answer) => answer.total));
+}
+
+// What a solver likely pays at one step: the answers cheapest first, each spotted with chance SPOT, and the first one spotted taken (none spotted = look again)
+function likelyCost(totals) {
+  const sorted = [...totals].sort((a, b) => a - b);
+  // Chance that every cheaper answer went unspotted
+  let unseen = 1;
+  // Each answer's total times its chance of being the one taken, and those chances added up
+  let paid = 0;
+  let chance = 0;
+  for (const total of sorted) {
+    paid += unseen * SPOT * total;
+    chance += unseen * SPOT;
+    unseen *= 1 - SPOT;
+  }
+  return paid / chance;
+}
+
+// How kind a scramble is to the method, from the engine's run from it: its whole solve plus what a solver likely misses at each step, as a score (higher = easier to solve well)
+function rateScramble(run, engine, judged) {
+  const lists = optionLists(run, judged);
+  // What a solver likely pays over each step's best answer, added up
+  const missed = sum(lists.map((totals) => likelyCost(totals) - Math.min(...totals)));
+  // The engine's whole solve from the scramble, with that on top
+  const cost = engine[judged] + missed;
+  // Answers within GOOD of each step's best, on average (null = no step compared any)
+  const good = mean(lists.map((totals) => totals.filter((total) => total <= Math.min(...totals) * (1 + GOOD) + 1e-9).length));
+  return { score: 100 * 2 ** (-cost / HALF), cost, missed, good, lists };
+}
+
 // ============ REVIEW ============
 // Review a typed solution against a method: per step, your moves (with where they are in your solution) and the engine's pick from the same spot,
 // and the engine's whole way on from there (onProgress hears which engine run is going, of how many, the step it starts from, and that run's live progress);
@@ -632,8 +679,12 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
     usedRuns.set(moves.length, run);
     fromYourEnd = methodFigures(run, false);
   }
+
   // The engine's whole method solution from the scramble (the first run starts there)
   const engine = steps[0].fromHere;
+  // How kind the scramble is to this method, from the engine's run from the scramble (the run at 0 moves)
+  const scrambleRating = rateScramble(usedRuns.get(0), engine, judged);
+
   return {
     method: method.name,
     judged,
@@ -646,6 +697,8 @@ export async function evaluateSolution(scramble, solution, methodData, onProgres
     stopsIn: method.steps[ends.length]?.name ?? null,
     yours,
     engine,
+    // The scramble's score, likely cost, what's likely missed, good options a step, and the lists they came from
+    scrambleRating,
     fromYourEnd,
     steps,
     // The engine runs it used, which rebuild this review without the engine (see seedRuns): [{ at: your moves before the run, run }]

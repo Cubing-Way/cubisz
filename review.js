@@ -246,6 +246,12 @@ function overall(rating, pace) {
   return { tone: net < 2.5 ? "warn" : "worse", text: `${amount(net, pace)} ${moreWord()}` };
 }
 
+// The scramble score's note: what the scramble likely costs a solver (effort, or moves with FMC) and its good options a step
+function scrambleNote({ cost, good }) {
+  const likely = `likely ${cost.toFixed(1)} ${judged === "moves" ? "moves" : "effort"}`;
+  return `${likely} · ${good === null ? "no options compared" : `${good.toFixed(1)} good options a step`}`;
+}
+
 // ============ REVIEW PARTS ============
 // A summary tile: a small label, a big value (tinted by tone) and a note under it
 function tile(label, value, note, tone = "") {
@@ -658,6 +664,7 @@ function explainer() {
     "Follow the engine's solve: the cube plays the engine's own solve from the scramble, and each of its steps is shown with your step for the same goal under it (from your cube, so the cases differ), like a race; the totals after each step say who's ahead.",
     "Branch here (following the engine): the engine's line follows your moves up to that step, then solves your cube from there, so you see what it would have done after your own start.",
     "Accuracy is how close each step came to the engine's best, like chess.com's: the answers the engine compared rank yours, and the effort you lost against its best sets the percentage (it counts as many steps ahead as the method looks ahead). Answers it didn't compare get an estimate.",
+    "Scramble scores the scramble itself, not your solve: the engine's own solve from it, plus what a solver who spots one in three of the answers it compared at each step would likely miss, as 100 halved every 60 effort (moves with FMC). Lucky scrambles with many good options score higher; a good option is within 10% of its step's best.",
     "Under each move: the suggested fingertrick (R / L = right or left hand). The colored line shows the hand, ↻ marks a regrip. Click a move to see the cube after it.",
   ]) items.append(el("li", "", text));
   details.append(items);
@@ -722,6 +729,8 @@ export function renderReview(container, evaluation, time, actions) {
         : "no step to rate yet",
       total.tone,
     ),
+    // How kind the scramble is to the method, whatever you did (higher = easier to solve well)
+    tile("Scramble", `${Math.round(evaluation.scrambleRating.score)}`, scrambleNote(evaluation.scrambleRating)),
   );
   review.append(tiles, statsGrid(score, evaluation));
   // Your solution doesn't finish the cube: say where it stops, and the engine's way to finish from your last move

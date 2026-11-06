@@ -2,7 +2,7 @@
 import { scoreEvaluation, rated } from "./evaluate.js";
 
 // This format's version, kept with the metrics, so statistics can tell solves reviewed under an older one apart
-const METRICS_VERSION = 2;
+const METRICS_VERSION = 3;
 
 // A figure to 2 decimals (no figure stays null)
 function round(value) {
@@ -46,6 +46,8 @@ function savedRuns(evaluation) {
     text: run.wide ?? run.solution,
     rows: run.steps.map((step) => step.wide ?? step.solution.toString()),
     rank: savedRank(evaluation, at),
+    // The run from the scramble keeps the answers each step compared, which the scramble score comes from (left out of every other run)
+    options: at === 0 ? evaluation.scrambleRating.lists.map((totals) => totals.map(round)) : undefined,
   }));
 }
 
@@ -75,6 +77,10 @@ export function solveMetrics(evaluation, time = null) {
     // The engine's own solve from the scramble
     engineMoves: evaluation.engine.moves,
     engineEffort: round(evaluation.engine.speed),
+    // How kind the scramble is to the method (higher = easier to solve well), the effort it likely costs a solver, and its good options a step (null = no step compared any)
+    scrambleScore: round(evaluation.scrambleRating.score),
+    scrambleCost: round(evaluation.scrambleRating.cost),
+    scrambleOptions: round(evaluation.scrambleRating.good),
     // Your pace, with your time: moves per second, effort per second, the engine's solve at that rate, and what your choices cost at it
     time: pace ? pace.time : null,
     tps: pace ? round(pace.tps) : null,
