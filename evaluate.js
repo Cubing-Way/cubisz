@@ -491,8 +491,8 @@ const CURVE = { scale: 103.1668, decay: 0.04354, shift: 3.1669 };
 // Most share of the solve a step may lose for each name, using chess.com's move class limits
 const CLASSES = [[0, "Best"], [2, "Excellent"], [5, "Good"], [10, "Inaccuracy"], [20, "Mistake"], [Infinity, "Blunder"]];
 
-// A step's accuracy from the share of the solve it lost: 0% lost = 100, 5% ≈ 80, 10% ≈ 64, 20% ≈ 39
-function accuracyFrom(share) {
+// A step's accuracy from the share of the solve it lost: 0% lost = 100, 5% ≈ 80, 10% ≈ 64, 20% ≈ 39 (review.js tints the step choices tile by it too)
+export function accuracyFrom(share) {
   return Math.min(100, Math.max(0, CURVE.scale * Math.exp(-CURVE.decay * share) - CURVE.shift));
 }
 

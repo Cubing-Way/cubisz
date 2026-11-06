@@ -1,6 +1,6 @@
 // Solve review, the page side: draws a review (summary, stats, a race against the engine's own solve, one card per step), the step solver's answer, and moves as chips
 // with their fingertricks; what's shown comes from evaluate.js
-import { rated, setupSign, scoreEvaluation, plural, engineLine } from "./evaluate.js";
+import { rated, setupSign, scoreEvaluation, plural, engineLine, accuracyFrom } from "./evaluate.js";
 
 // ============ SMALL HELPERS ============
 // A new element with a class and text (both optional)
@@ -237,13 +237,14 @@ function stepNote(step, pace) {
   return notes.join(" ");
 }
 
-// The verdict on all your step choices together: the summed net, as a headline and a tone
-function overall(rating, pace) {
+// The verdict on all your step choices together: the summed net, as a headline and a tone; engineTotal = the engine's whole solve in what's judged
+function overall(rating, pace, engineTotal) {
   if (!rating.steps) return { tone: "", text: "—" };
   const net = judged === "moves" ? rating.netMoves : rating.netSpeed;
   if (Math.abs(net) < 0.5) return { tone: "even", text: "On par" };
   if (net < 0) return { tone: "better", text: `${amount(net, pace)} ${lessWord()}` };
-  return { tone: net < 2.5 ? "warn" : "worse", text: `${amount(net, pace)} ${moreWord()}` };
+  // Behind: tinted as an accuracy of that share of the engine's solve, so the tint grows with the solve (green to about 5%, amber to about 15%, red past)
+  return { tone: accuracyTone(accuracyFrom((100 * net) / (engineTotal || 1))), text: `${amount(net, pace)} ${moreWord()}` };
 }
 
 // The scramble score's note: what the scramble likely costs a solver (effort, or moves with FMC) and its good options a step
@@ -720,7 +721,7 @@ export function renderReview(container, evaluation, time, actions) {
   head.append(title);
   review.append(head);
   // Summary: your accuracy, your solve, the engine's with the same method, and your step choices together
-  const total = overall(rating, pace);
+  const total = overall(rating, pace, evaluation.engine[judged]);
   const tiles = el("div", "tiles");
   tiles.append(
     // How close your step choices came to the engine's best
