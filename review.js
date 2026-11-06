@@ -252,6 +252,16 @@ function scrambleNote({ cost, good }) {
   return `${likely} · ${good === null ? "no options compared" : `${good.toFixed(1)} good options a step`}`;
 }
 
+// The scramble score as shown: its percentage rounded down (so 49.6, a Medium, never shows as 50, where Good starts) and its label
+function scrambleText({ percent, label }) {
+  return `${Math.floor(percent)}% · ${label}`;
+}
+
+// A tint for a scramble's label: green for Great and Excellent, amber for Hard, red for Very hard, none for Good and Medium
+function scrambleTone(label) {
+  return { Excellent: "better", Great: "better", Hard: "warn", "Very hard": "worse" }[label] ?? "";
+}
+
 // ============ REVIEW PARTS ============
 // A summary tile: a small label, a big value (tinted by tone) and a note under it
 function tile(label, value, note, tone = "") {
@@ -664,7 +674,7 @@ function explainer() {
     "Follow the engine's solve: the cube plays the engine's own solve from the scramble, and each of its steps is shown with your step for the same goal under it (from your cube, so the cases differ), like a race; the totals after each step say who's ahead.",
     "Branch here (following the engine): the engine's line follows your moves up to that step, then solves your cube from there, so you see what it would have done after your own start.",
     "Accuracy is how close each step came to the engine's best, like chess.com's: the answers the engine compared rank yours, and the effort you lost against its best sets the percentage (it counts as many steps ahead as the method looks ahead). Answers it didn't compare get an estimate.",
-    "Scramble scores the scramble itself, not your solve: the engine's own solve from it, plus what a solver who spots one in three of the answers it compared at each step would likely miss, as 100 halved every 60 effort (moves with FMC). Lucky scrambles with many good options score higher; a good option is within 10% of its step's best.",
+    "Scramble scores the scramble itself, not your solve: the engine's own solve from it, plus what a solver who spots one in three of the answers it compared at each step would likely miss. That likely cost sets the percentage: 100% at 50 effort or less, 0% at 95 or more (30 and 70 moves with FMC), named Excellent from 80%, Great 65%, Good 50%, Medium 35%, Hard 20%, else Very hard. Lucky scrambles with many good options score higher; a good option is within 10% of its step's best.",
     "Under each move: the suggested fingertrick (R / L = right or left hand). The colored line shows the hand, ↻ marks a regrip. Click a move to see the cube after it.",
   ]) items.append(el("li", "", text));
   details.append(items);
@@ -729,8 +739,8 @@ export function renderReview(container, evaluation, time, actions) {
         : "no step to rate yet",
       total.tone,
     ),
-    // How kind the scramble is to the method, whatever you did (higher = easier to solve well)
-    tile("Scramble", `${Math.round(evaluation.scrambleRating.score)}`, scrambleNote(evaluation.scrambleRating)),
+    // How kind the scramble is to the method, whatever you did: its percentage and label, tinted by the label
+    tile("Scramble", scrambleText(evaluation.scrambleRating), scrambleNote(evaluation.scrambleRating), scrambleTone(evaluation.scrambleRating.label)),
   );
   review.append(tiles, statsGrid(score, evaluation));
   // Your solution doesn't finish the cube: say where it stops, and the engine's way to finish from your last move

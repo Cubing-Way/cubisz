@@ -2,7 +2,7 @@
 import { scoreEvaluation, rated } from "./evaluate.js";
 
 // This format's version, kept with the metrics, so statistics can tell solves reviewed under an older one apart
-const METRICS_VERSION = 3;
+const METRICS_VERSION = 4;
 
 // A figure to 2 decimals (no figure stays null)
 function round(value) {
@@ -77,8 +77,9 @@ export function solveMetrics(evaluation, time = null) {
     // The engine's own solve from the scramble
     engineMoves: evaluation.engine.moves,
     engineEffort: round(evaluation.engine.speed),
-    // How kind the scramble is to the method (higher = easier to solve well), the effort it likely costs a solver, and its good options a step (null = no step compared any)
-    scrambleScore: round(evaluation.scrambleRating.score),
+    // How kind the scramble is to the method, from 0 to 100 (higher = easier to solve well), its label ("Excellent" to "Very hard"), the effort it likely costs a solver, and its good options a step (null = no step compared any)
+    scrambleScore: round(evaluation.scrambleRating.percent),
+    scrambleLabel: evaluation.scrambleRating.label,
     scrambleCost: round(evaluation.scrambleRating.cost),
     scrambleOptions: round(evaluation.scrambleRating.good),
     // Your pace, with your time: moves per second, effort per second, the engine's solve at that rate, and what your choices cost at it

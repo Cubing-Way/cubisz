@@ -562,8 +562,14 @@ function solveAccuracy(steps) {
 // Chance a solver spots each answer the engine compared at a step (they take the cheapest one they spotted): lower = finding the good ones counts for more
 const SPOT = 1 / 3;
 
-// Likely cost at which the score halves: 100 at 0, 50 at 60 effort (or moves with FMC), 25 at 120
-const HALF = 60;
+// Likely cost (effort, or moves with FMC) at which a scramble scores 100%, or less: lucky, with several good answers at every step
+const EASY = { speed: 50, moves: 30 };
+
+// Likely cost at which it scores 0%, or more; in between, the percentage goes down in a straight line
+const HARD = { speed: 95, moves: 70 };
+
+// Least percentage for each label, best first (set on 11 seeded CFOP level 3 scrambles: 2 Great, 4 Good, 4 Medium, 2 Hard)
+const LABELS = [[80, "Excellent"], [65, "Great"], [50, "Good"], [35, "Medium"], [20, "Hard"], [0, "Very hard"]];
 
 // Most share above a step's best total that still counts as a good option: 10%
 const GOOD = 0.1;
@@ -602,7 +608,10 @@ function rateScramble(run, engine, judged) {
   const cost = engine[judged] + missed;
   // Answers within GOOD of each step's best, on average (null = no step compared any)
   const good = mean(lists.map((totals) => totals.filter((total) => total <= Math.min(...totals) * (1 + GOOD) + 1e-9).length));
-  return { score: 100 * 2 ** (-cost / HALF), cost, missed, good, lists };
+  // Where the likely cost sits between EASY (100%) and HARD (0%), kept within 0 to 100
+  const percent = Math.min(100, Math.max(0, (100 * (HARD[judged] - cost)) / (HARD[judged] - EASY[judged])));
+  // The label of the first limit the percentage reaches (every one reaches 0, Very hard)
+  return { percent, label: LABELS.find(([least]) => percent >= least)[1], cost, missed, good, lists };
 }
 
 // ============ REVIEW ============
