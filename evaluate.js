@@ -341,10 +341,14 @@ export function splitSolution(scramble, moves, methodData) {
 
 // How many of the method's steps in a row are done on the cube right after these typed moves (where the step solver starts from)
 export function stepsDoneAt(scramble, moves, methodData) {
-  const method = methodOf(methodData);
-  const done = moves.map(plainMove).join(" ");
+  return stepsHeld(scramble, moves.map(plainMove), methodOf(methodData).steps);
+}
+
+// How many of these steps in a row hold after these plain moves
+function stepsHeld(scramble, plain, steps) {
+  const done = plain.join(" ");
   let count = 0;
-  while (count < method.steps.length && holdsAfter(scramble, done, method.steps, count)) count++;
+  while (count < steps.length && holdsAfter(scramble, done, steps, count)) count++;
   return count;
 }
 
@@ -492,10 +496,10 @@ function accuracyFrom(share) {
   return Math.min(100, Math.max(0, CURVE.scale * Math.exp(-CURVE.decay * share) - CURVE.shift));
 }
 
-// Moves or effort (judged) from these moves until a step's goal holds, following a line of moves (0 when the goal already holds)
+// Moves or effort (judged) from these moves until a step's goal holds, following a line of moves (0 when the goal already holds), and how many steps hold by then
 function costTo(scramble, moves, plain, line, methodSteps, target, judged) {
   const { pick } = enginePick(scramble, plain, { steps: [{ name: "", solution: line }] }, methodSteps, target, moves.length === 0);
-  return restFigures(pick, moves.join(" "))[judged];
+  return { cost: restFigures(pick, moves.join(" "))[judged], held: stepsHeld(scramble, [...plain, ...words(pick).map(plainMove)], methodSteps) };
 }
 
 // Your answer's place among the answers the engine compared at this spot: { place (0 = not listed), of, gap (moves or effort behind its best, as the step ranks) }, or null with no list
@@ -520,16 +524,23 @@ function addAccuracy(scramble, steps, moves, plain, methodSteps, usedRuns, judge
   const engineTotal = steps[0].fromHere[judged] || 1;
   steps.forEach((step, index) => {
     if (!rated(step)) return;
-    // The last step this one is judged up to: itself with no lookahead, never past the method's end
-    const target = Math.min(index + (methodSteps[index].lookahead ?? 0), methodSteps.length - 1);
-    // The engine's way on from the end of your step (nothing after the last step)
     const next = steps[index + 1];
-    const yourRest = next ? costTo(scramble, moves.slice(0, step.end), plain.slice(0, step.end), next.fromHere.text, methodSteps, target, judged) : 0;
-    // The engine's way on after its own pick
     const pickMoves = words(step.engine.text);
-    const pickRest = costTo(scramble, [...moves.slice(0, step.start), ...pickMoves], [...plain.slice(0, step.start), ...pickMoves.map(plainMove)], step.engineRest.text, methodSteps, target, judged);
+    // Both ways on up to a step: the engine's from the end of your step (nothing after the last step), and the engine's after its own pick
+    const waysTo = (target) => [
+      next ? costTo(scramble, moves.slice(0, step.end), plain.slice(0, step.end), next.fromHere.text, methodSteps, target, judged) : { cost: 0, held: stepsHeld(scramble, plain.slice(0, step.end), methodSteps) },
+      costTo(scramble, [...moves.slice(0, step.start), ...pickMoves], [...plain.slice(0, step.start), ...pickMoves.map(plainMove)], step.engineRest.text, methodSteps, target, judged),
+    ];
+    // The last step this one is judged up to: itself with no lookahead, never past the method's end
+    let target = Math.min(index + (methodSteps[index].lookahead ?? 0), methodSteps.length - 1);
+    let [yourRest, pickRest] = waysTo(target);
+    // Further while one way has finished more steps by then (a pseudo XCross only lined up later, a pair that solves the next one too), so both count the same steps
+    while (Math.max(yourRest.held, pickRest.held) - 1 > target) {
+      target = Math.max(yourRest.held, pickRest.held) - 1;
+      [yourRest, pickRest] = waysTo(target);
+    }
     // Your way against the engine's, below 0 = better; the engine's exact moves lose nothing
-    const estimate = step.yours.text === step.engine.text ? 0 : step.yours[judged] + yourRest - (step.engine[judged] + pickRest);
+    const estimate = step.yours.text === step.engine.text ? 0 : step.yours[judged] + yourRest.cost - (step.engine[judged] + pickRest.cost);
     const rank = rankOf(step, usedRuns.get(step.start));
     // A listed answer uses the engine's own gap, since that's the ranking it picked by (in moves with FMC, whose steps rank by moves)
     const lost = rank?.place ? rank.gap : estimate;
