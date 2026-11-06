@@ -1,1 +1,0 @@
-({expose:!0}).expose&&import(`./inside-JAJOK2MI-DhTruDmi.js`).then(()=>{globalThis.postMessage?globalThis.postMessage(`comlink-exposed`):globalThis.process.getBuiltinModule(`node:worker_threads`).parentPort?.postMessage(`comlink-exposed`)});var e=import.meta.url;export{e as WORKER_ENTRY_FILE_URL};
